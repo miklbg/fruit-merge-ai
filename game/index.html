@@ -9,670 +9,801 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Matter.js Physics Engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <!-- Load Tone.js Audio Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
     
     <style>
         html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* Prevent scrolling */
-            -webkit-touch-callout: none; /* Disable callouts, image save, etc */
-            -webkit-user-select: none; /* Disable selection */
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            font-family: 'Inter', sans-serif;
-        }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-        
-        #game-container {
-            touch-action: none; /* Disable panning/zooming gestures */
-            -webkit-tap-highlight-color: rgba(0,0,0,0); /* Disable tap highlight */
-        }
-
-        /* Prevent scrolling on modal */
-        .modal-open {
             overflow: hidden;
             height: 100%;
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+            touch-action: none; 
+            /* --- FIX: Bright background --- */
+            background-color: #e0f2fe; /* bg-sky-100 */
         }
         
-        /* Line above which game ends */
-        .deadline {
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-wrapper {
+            display: flex;
+            flex-direction: column;
+            width: 100vw;
+            height: 100vh;
+            /* --- FIX: Bright wrapper background --- */
+            background-color: #fff7ed; /* bg-orange-50 */
+            overflow: hidden;
+            position: relative;
+
+            aspect-ratio: 2 / 3; 
+            
+            max-width: 100vw; 
+            max-height: 100vh; 
+            
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        #game-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+        }
+        
+        #preview-fruit {
+            position: absolute;
+            left: 50%;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0.8;
+            border: 2px dashed rgba(0, 0, 0, 0.3); /* Darker dash for light bg */
+            
+            border-radius: 0;
+            
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-shadow: 0 0 5px rgba(0,0,0,0.2);
+            backface-visibility: hidden;
+        }
+
+        #game-canvas-wrapper {
             position: absolute;
             left: 0;
             right: 0;
-            border-bottom: 2px dashed rgba(255, 0, 0, 0.5);
-            z-index: 10;
-        }
-
-        /* Next fruit indicator line */
-        .indicator-line {
-            position: absolute;
-            top: 0; /* Positioned by JS */
-            left: 50%; /* Centered */
-            width: 2px;
-            height: 30px;
-            background: linear-gradient(to bottom, rgba(255,255,255,0.5), rgba(255,255,255,0));
-            transform: translateX(-50%);
-            z-index: 20;
-            opacity: 0;
-            transition: opacity 0.2s;
+            bottom: 0;
+            z-index: 1;
         }
         
-        .indicator-line.visible {
-            opacity: 1;
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #loading-screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* --- FIX: Bright loading screen --- */
+            background-color: #fff7ed; /* bg-orange-50 */
+            z-index: 99;
+            font-size: 1.5rem;
+            color: #1f2937; /* text-gray-800 */
+            font-weight: 500;
         }
 
+        #game-over-modal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        #game-over-modal.hidden {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+        }
+
+        #confetti-container {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 15; 
+        }
+        .confetti-piece {
+            position: absolute;
+            background-color: white; 
+            border-radius: 50%;
+            opacity: 1;
+            transition: transform 0.8s ease-out, opacity 0.8s ease-out;
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-white font-sans overflow-hidden">
+<!-- --- FIX: Bright body classes --- -->
+<body class="bg-sky-100 text-gray-800">
 
-    <!-- Header -->
-    <div id="header" class="fixed top-0 left-0 right-0 z-50 p-4 flex justify-between items-center bg-gray-900/80 backdrop-blur-sm">
-        <div class="flex items-center space-x-4">
-            <div>
-                <span class="text-xs text-gray-400 block">SCORE</span>
-                <span id="score" class="text-2xl font-bold">0</span>
+    <div id="game-wrapper">
+        
+        <div id="loading-screen">Loading...</div>
+
+        <!-- --- FIX: Bright header --- -->
+        <div id="game-header" class="p-4 flex justify-between items-center bg-white/50 backdrop-blur-sm">
+            <div class="flex gap-4">
+                <div>
+                    <span class="text-sm opacity-80">Score</span>
+                    <div id="score" class="text-2xl font-bold">0</div>
+                </div>
+                <div>
+                    <span class="text-sm opacity-80">High Score</span>
+                    <div id="high-score" class="text-2xl font-bold">0</div>
+                </div>
             </div>
-            <div>
-                <span class="text-xs text-gray-400 block">BEST</span>
-                <span id="high-score" class="text-2xl font-bold">0</span>
+            <div class="text-right">
+                <div class="flex items-center gap-4">
+                    <div>
+                        <span class="text-sm opacity-80">Next</span>
+                        <div id="next-fruit" class="text-3xl"></div>
+                    </div>
+                    <!-- --- FIX: Playful button color --- -->
+                    <button id="new-game-button" class="mt-4 px-3 py-1 bg-orange-500 text-white font-bold rounded-lg shadow-lg text-sm hover:bg-orange-400 transition-all">
+                        New Game
+                    </button>
+                </div>
             </div>
         </div>
-        <div class="text-right">
-            <span class="text-xs text-gray-400 block">NEXT</span>
-            <div id="next-fruit-container" class="w-10 h-10 rounded-full transition-transform duration-300 ease-out"></div>
-        </div>
-    </div>
+        
+        <div id="preview-fruit"></div>
+        <div id="game-canvas-wrapper"></div>
+        <div id="confetti-container"></div>
 
-    <!-- Game Over Modal -->
-    <div id="game-over-modal" class="hidden fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg p-8 text-center shadow-xl">
-            <h2 class="text-3xl font-bold mb-4">Game Over</h2>
-            <p class="text-lg mb-2">Your Score:</p>
-            <p id="final-score" class="text-4xl font-bold mb-8">0</p>
-            <button id="restart-button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors">
-                Play Again
+        <!-- --- FIX: Bright game over modal --- -->
+        <div id="game-over-modal" class="hidden absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-20 flex flex-col justify-center items-center text-center p-8">
+            <h2 class="text-5xl font-bold text-red-500 mb-4">Game Over</h2>
+            <p class="text-xl mb-2">Final Score:</p>
+            <div id="final-score" class="text-4xl font-bold mb-8">0</div>
+            <!-- --- FIX: Playful button color --- -->
+            <button id="restart-button" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-green-400 transition-all">
+                Restart
             </button>
         </div>
     </div>
 
-    <!-- Confirm Restart Modal -->
-    <div id="confirm-restart-modal" class="hidden fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg p-8 text-center shadow-xl max-w-sm w-full">
-            <h2 class="text-2xl font-bold mb-4">Restart Game?</h2>
-            <p class="text-md mb-6 text-gray-300">Your current game progress will be lost.</p>
-            <div class="flex space-x-4">
-                <button id="confirm-restart-no" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors">
-                    Cancel
-                </button>
-                <button id="confirm-restart-yes" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors">
-                    Restart
-                </button>
-            </div>
-        </div>
-    </div>
-    
+    <script type="module">
+        // Wait for the *entire page* to load
+        window.onload = () => {
+            
+            // --- DOM Elements ---
+            const gameWrapper = document.getElementById('game-wrapper');
+            const headerEl = document.getElementById('game-header');
+            const canvasWrapper = document.getElementById('game-canvas-wrapper');
+            const loadingScreen = document.getElementById('loading-screen');
+            const previewFruitEl = document.getElementById('preview-fruit');
+            const confettiContainer = document.getElementById('confetti-container');
+            
+            const scoreEl = document.getElementById('score');
+            const highScoreEl = document.getElementById('high-score');
+            const nextFruitEl = document.getElementById('next-fruit');
+            const newGameButton = document.getElementById('new-game-button');
+            const gameOverModal = document.getElementById('game-over-modal');
+            const finalScoreEl = document.getElementById('final-score');
+            const restartButton = document.getElementById('restart-button');
 
-    <!-- Game Container -->
-    <div id="game-container" class="absolute inset-0">
-        <!-- The deadline line will be injected here by JS -->
-    </div>
-    <!-- The indicator line will be injected here by JS -->
+            // --- Matter.js modules ---
+            const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Common } = Matter;
 
-
-    <script>
-        (function() {
-            'use strict';
-
-            // --- Matter.js Modules ---
-            const Engine = Matter.Engine;
-            const Render = Matter.Render;
-            const Runner = Matter.Runner;
-            const Bodies = Matter.Bodies;
-            const Composite = Matter.Composite;
-            const Events = Matter.Events;
-            const Body = Matter.Body;
+            // --- Pre-defined clip-paths for preview shapes (for CSS) ---
+            const POLYGON_CLIP_PATHS = {
+                'circle': 'circle(50%)',
+                5: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)', // Pentagon
+                6: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', // Hexagon
+                7: 'polygon(50% 0%, 90% 20%, 100% 60%, 75% 100%, 25% 100%, 0% 60%, 10% 20%)', // Heptagon
+                8: 'polygon(50% 0%, 85% 15%, 100% 50%, 85% 85%, 50% 100%, 15% 85%, 0% 50%, 15% 15%)', // Octagon
+                10: 'polygon(50% 0%, 80% 10%, 100% 35%, 100% 65%, 80% 90%, 50% 100%, 20% 90%, 0% 65%, 0% 35%, 20% 10%)' // Decagon
+            };
 
             // --- Game Configuration ---
+            
+            const NATIVE_WIDTH = 400; // Our "design" width
+            let scaleFactor = 1; // Will be set in initGame
+
             const FRUITS = [
-                { name: 'cherry', radius: 12, color: '#FF0000', score: 1 },    // 0
-                { name: 'strawberry', radius: 16, color: '#FF4500', score: 2 }, // 1
-                { name:A: 'grape', radius: 20, color: '#800080', score: 3 },     // 2
-                { name: 'kiwi', radius: 25, color: '#8B4513', score: 4 },    // 3
-                { name: 'orange', radius: 30, color: '#FFA500', score: 5 },    // 4
-                { name: 'apple', radius: 38, color: '#DC143C', score: 6 },     // 5
-                { name: 'peach', radius: 45, color: '#FFC0CB', score: 7 },    // 6
-                { name: 'pineapple', radius: 55, color: '#FFD700', score: 8 },   // 7
-                { name: 'melon', radius: 65, color: '#008000', score: 9 },      // 8
-                { name: 'watermelon', radius: 80, color: '#32CD32', score: 10 },   // 9
-                // Max merge
-                { name: 'coconut', radius: 100, color: '#A52A2A', score: 11 },   // 10
+                // Use 'baseRadius' for all pixel values
+                { level: 0, baseRadius: 22, sides: 8, color: '#FFB6C1', emoji: '🍒', score: 5, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 1, baseRadius: 26, sides: 6, color: '#FF6347', emoji: '🍓', score: 10, clipPath: POLYGON_CLIP_PATHS[6] },
+                { level: 2, baseRadius: 34, sides: 5, color: '#FFD700', emoji: '🍇', score: 20, clipPath: POLYGON_CLIP_PATHS[5] },
+                { level: 3, baseRadius: 38, sides: 8, color: '#FF8C00', emoji: '🍊', score: 35, clipPath: POLYGON_CLIP_PATHS[8] },
+                { level: 4, baseRadius: 48, sides: 8, color: '#FF4500', emoji: '🍎', score: 55, clipPath: POLYGON_CLIP_PATHS[8] },
+                { level: 5, baseRadius: 58, sides: 6, color: '#ADFF2F', emoji: '🍐', score: 80, clipPath: POLYGON_CLIP_PATHS[6] },
+                { level: 6, baseRadius: 66, sides: 8, color: '#FFFF00', emoji: '🍑', score: 110, clipPath: POLYGON_CLIP_PATHS[8] },
+                { level: 7, baseRadius: 78, sides: 7, color: '#F0E68C', emoji: '🍍', score: 150, clipPath: POLYGON_CLIP_PATHS[7] },
+                { level: 8, baseRadius: 90, sides: 10, color: '#90EE90', emoji: '🍈', score: 200, clipPath: POLYGON_CLIP_PATHS[10] },
+                { level: 9, baseRadius: 102, sides: 10, color: '#32CD32', emoji: '🍉', score: 300, clipPath: POLYGON_CLIP_PATHS[10] },
             ];
-            const MAX_FRUIT_INDEX = FRUITS.length - 1;
-            const STARTING_FRUITS_MAX_INDEX = 4; // Max index for randomly spawned fruits (Orange)
-            const DEADLINE_Y_RATIO = 0.18; // 18% from the top
-            const HIGHSCORE_KEY = 'fruitMergeHighScore';
 
-            // --- DOM Elements ---
-            let gameContainer, nextFruitContainer, scoreEl, highScoreEl, gameOverModal, finalScoreEl, restartButton, deadlineLine, indicatorLine, confirmRestartModal, confirmRestartYes, confirmRestartNo;
-
-            // --- Matter.js ---
-            let engine, render, runner;
+            const MAX_FRUIT_LEVEL = FRUITS.length - 1;
+            const STARTING_FRUIT_LEVELS = 4;
+            const GAME_OVER_LINE_Y_PERCENT = 0.18; 
+            const DROP_AREA_Y_PERCENT = 0.1; 
+            const BASE_WALL_THICKNESS = 40; 
+            const EMOJI_SCALE_FACTOR = 1.7;
+            const HIGHSCORE_KEY = 'fruit-merge-highscore';
+            const GAME_STATE_KEY = 'fruit-merge-gamestate'; 
 
             // --- Game State ---
-            let currentFruitBody = null;
-            let currentFruitIndex = 0;
-            let nextFruitIndex = 0;
+            let engine, render, runner, world;
             let score = 0;
-            let highScore = 0;
-            let disableDrop = false;
+            let highScore = 0; 
+            let currentFruitLevel = 0;
+            let nextFruitLevel = 0;
+            let isGameOver = false;
+            let isDropping = false; 
+            let collisionTimeout = null;
+            let currentPreviewX = 0; 
+            let saveCounter = 0; 
+            
             let bodiesToRemoveSet = new Set();
             let bodiesToAddArray = [];
-
-            // --- Audio ---
-            let mergeSynth; // Will be initialized on start
 
             // --- Game Dimensions (will be set in initGame) ---
             let headerHeight = 0;
             let boxWidth = 0;
             let boxHeight = 0;
-            let deadlineY = 0;
-            let wallThickness = 50;
+            let gameOverLineY = 0;
+            let dropAreaY = 0;
+            let wallThickness = 40; 
 
-            // --- Initialization ---
-            window.onload = initGame;
-
-            function initGame() {
-                // --- Setup DOM elements ---
-                gameContainer = document.getElementById('game-container');
-                nextFruitContainer = document.getElementById('next-fruit-container');
-                scoreEl = document.getElementById('score');
-                highScoreEl = document.getElementById('high-score');
-                gameOverModal = document.getElementById('game-over-modal');
-                finalScoreEl = document.getElementById('final-score');
-                restartButton = document.getElementById('restart-button');
-                confirmRestartModal = document.getElementById('confirm-restart-modal');
-                confirmRestartYes = document.getElementById('confirm-restart-yes');
-                confirmRestartNo = document.getElementById('confirm-restart-no');
-
-                // --- Setup Game Dimensions ---
-                setupGameDimensions();
-
-                // --- Setup Matter.js ---
-                engine = createNewEngine();
-                render = createNewRenderer(engine);
-                runner = createNewRunner();
-                
-                // Add initial walls for the first load
-                addWalls(engine);
-
-                // --- Setup Event Listeners ---
-                
-                restartButton.addEventListener('click', () => {
-                    // Show confirm modal instead of direct restart
-                    confirmRestartModal.classList.remove('hidden');
-                    document.body.classList.add('modal-open');
-                });
-                
-                confirmRestartYes.addEventListener('click', () => {
-                    // Safely start audio context
-                    try {
-                        if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
-                            Tone.start();
-                        }
-                    } catch (e) {
-                        console.error("Failed to start audio context:", e);
-                    }
-                    startGame(); // Start a new game
-                });
-
-                confirmRestartNo.addEventListener('click', () => {
-                    confirmRestartModal.classList.add('hidden');
-                    document.body.classList.remove('modal-open');
-                });
-
-                // --- Start rendering ---
-                Matter.Render.run(render);
-                
-                // --- MODIFICATION: DO NOT START THE RUNNER HERE ---
-                // Matter.Runner.run(runner, engine); <-- REMOVED
-                
-                // --- Start the game immediately ---
-                // Safely start audio context
-                try {
-                    if (typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
-                        Tone.start();
-                    }
-                } catch (e) {
-                    console.error("Failed to start audio context:", e);
-                }
-                startGame();
-            }
-
-            function setupGameDimensions() {
-                headerHeight = document.getElementById('header').offsetHeight;
-                boxWidth = Math.min(window.innerWidth, 450); // Max width for game area
-                boxHeight = window.innerHeight;
-
-                // Adjust game container size and position
-                gameContainer.style.width = `${boxWidth}px`;
-                gameContainer.style.height = `${boxHeight}px`;
-                gameContainer.style.position = 'absolute';
-                gameContainer.style.top = '0';
-                gameContainer.style.left = '50%';
-                gameContainer.style.transform = 'translateX(-50%)';
-                
-                deadlineY = boxHeight * DEADLINE_Y_RATIO;
-                
-                // Inject deadline line
-                if (!deadlineLine) {
-                    deadlineLine = document.createElement('div');
-                    deadlineLine.className = 'deadline';
-                    gameContainer.appendChild(deadlineLine);
-                }
-                deadlineLine.style.top = `${deadlineY}px`;
-                
-                // Inject indicator line
-                if (!indicatorLine) {
-                    indicatorLine = document.createElement('div');
-                    indicatorLine.className = 'indicator-line';
-                    gameContainer.appendChild(indicatorLine);
-                }
-                indicatorLine.style.top = `${headerHeight}px`;
-            }
-
-            // --- Extracted functions to create engine components ---
             
-            function createNewEngine() {
-                return Engine.create({
-                    gravity: { y: 0.6 },
-                    timing: { timeScale: 1 }
-                });
-            }
+            // --- ROBUST STARTUP ---
+            const layoutCheckInterval = setInterval(() => {
+                const w = gameWrapper.clientWidth;
+                const h = gameWrapper.clientHeight;
+                const hh = headerEl.clientHeight;
+                
+                if (w > 0 && h > 0 && hh > 0) {
+                    clearInterval(layoutCheckInterval);
+                    console.log(`Layout ready. Wrapper: ${w}x${h}, Header: ${hh}`);
+                    loadingScreen.style.display = 'none';
+                    initGame(); 
+                    setupResizeObserver();
+                } else {
+                    console.log("Waiting for layout dimensions...");
+                }
+            }, 50);
 
-            function createNewRenderer(engine) {
-                return Render.create({
-                    element: gameContainer,
+            // --- Game Initialization ---
+            function initGame() {
+                headerHeight = headerEl.clientHeight;
+                boxWidth = gameWrapper.clientWidth; 
+                boxHeight = gameWrapper.clientHeight - headerHeight; 
+                
+                scaleFactor = boxWidth / NATIVE_WIDTH;
+                wallThickness = BASE_WALL_THICKNESS * scaleFactor; 
+                
+                canvasWrapper.style.top = `${headerHeight}px`;
+                canvasWrapper.style.height = `${boxHeight}px`;
+                confettiContainer.style.top = `${headerHeight}px`;
+                confettiContainer.style.height = `${boxHeight}px`;
+
+                gameOverLineY = boxHeight * GAME_OVER_LINE_Y_PERCENT;
+                dropAreaY = boxHeight * DROP_AREA_Y_PERCENT;
+                currentPreviewX = boxWidth / 2;
+
+                isGameOver = false;
+                isDropping = false;
+                saveCounter = 0;
+                
+                highScore = parseInt(localStorage.getItem(HIGHSCORE_KEY) || '0');
+                highScoreEl.textContent = highScore;
+                
+                gameOverModal.classList.add('hidden');
+                
+                bodiesToRemoveSet.clear();
+                bodiesToAddArray = [];
+
+                engine = Engine.create();
+                world = engine.world;
+                world.gravity.y = 0.8; 
+
+                render = Render.create({
+                    element: canvasWrapper, 
                     engine: engine,
                     options: {
                         width: boxWidth,
                         height: boxHeight,
                         wireframes: false,
-                        background: 'transparent',
-                        pixelRatio: window.devicePixelRatio,
-                        showAngleIndicator: false,
+                        /* --- FIX: Bright render background --- */
+                        background: '#fff7ed' // bg-orange-50
                     }
                 });
-            }
 
-            function createNewRunner() {
-                return Matter.Runner.create();
-            }
+                runner = Runner.create();
+                World.clear(world, false);
 
-            function addWalls(engineInstance) {
-                const ground = createWall(boxWidth / 2, boxHeight + wallThickness / 2, boxWidth, wallThickness);
-                const leftWall = createWall(-wallThickness / 2, boxHeight / 2, wallThickness, boxHeight * 2); // Extra high
-                const rightWall = createWall(boxWidth + wallThickness / 2, boxHeight / 2, wallThickness, boxHeight * 2); // Extra high
-                Composite.add(engineInstance.world, [ground, leftWall, rightWall]);
-            }
-
-            function createWall(x, y, width, height) {
-                return Bodies.rectangle(x, y, width, height, {
+                const wallOptions = {
                     isStatic: true,
-                    render: { fillStyle: 'transparent' } // Walls are invisible
-                });
-            }
+                    restitution: 0.1,
+                    friction: 0.2,
+                    /* --- FIX: Playful wall color --- */
+                    render: { fillStyle: '#b45309' } // bg-amber-700
+                };
 
-            // --- Game Logic ---
-            
-            // --- Universal Start/Restart Function ---
-            function startGame() {
-                
-                // 1. Hide all overlays
-                confirmRestartModal.classList.add('hidden');
-                gameOverModal.classList.add('hidden');
-                document.body.classList.remove('modal-open');
+                World.add(world, [
+                    Bodies.rectangle(boxWidth / 2, boxHeight - wallThickness / 2, boxWidth, wallThickness, { ...wallOptions, label: 'ground' }),
+                    Bodies.rectangle(wallThickness / 2, boxHeight / 2, wallThickness, boxHeight, { ...wallOptions, label: 'wall-left' }),
+                    Bodies.rectangle(boxWidth - wallThickness / 2, boxHeight / 2, wallThickness, boxHeight, { ...wallOptions, label: 'wall-right' })
+                ]);
 
-                // 2. Stop the runner (in case it's a restart)
-                if (runner && runner.enabled) {
-                    Matter.Runner.stop(runner);
-                }
-                
-                // 3. Clear all bodies (fruits, old walls)
-                Composite.clear(engine.world, false);
-                
-                // 4. Re-add walls to the clean world
-                addWalls(engine);
+                const gameOverLine = Bodies.rectangle(
+                    boxWidth / 2,
+                    gameOverLineY,
+                    boxWidth,
+                    2,
+                    {
+                        isStatic: true,
+                        isSensor: true,
+                        label: 'gameOverLine',
+                        render: { fillStyle: '#FF0000', opacity: 0.5 } 
+                    }
+                );
+                World.add(world, gameOverLine);
 
-                // 5. Reset game state variables
-                score = 0;
-                updateScore(0);
-                
-                highScore = parseInt(localStorage.getItem(HIGHSCORE_KEY) || '0');
-                highScoreEl.textContent = highScore;
-                
-                // 6. Safely initialize audio synth
-                if (!mergeSynth && typeof Tone !== 'undefined' && Tone.PolySynth && Tone.Synth) {
+                const savedStateString = localStorage.getItem(GAME_STATE_KEY);
+                let loadedState = null;
+                if (savedStateString) {
                     try {
-                        mergeSynth = new Tone.PolySynth(Tone.Synth, {
-                            oscillator: { type: 'triangle' },
-                            envelope: {
-                                attack: 0.01,
-                                decay: 0.1,
-                                sustain: 0,
-                                release: 0.1
-                            }
-                        }).toDestination();
+                        loadedState = JSON.parse(savedStateString);
                     } catch (e) {
-                        console.error("Failed to initialize audio synth:", e);
-                        mergeSynth = null;
+                        console.error("Could not parse saved state:", e);
+                        localStorage.removeItem(GAME_STATE_KEY); 
                     }
                 }
+
+                if (loadedState) {
+                    console.log("Loading from saved state...");
+                    const loadedScaleFactor = loadedState.boxWidth ? (boxWidth / loadedState.boxWidth) : 1;
+
+                    loadedState.fruits.forEach(fruit => {
+                        const body = createFruitBody(
+                            fruit.x * loadedScaleFactor, 
+                            fruit.y * loadedScaleFactor, 
+                            fruit.level
+                        );
+                        
+                        Body.setAngle(body, fruit.angle);
+                        Body.setVelocity(body, { x: fruit.velocityX * loadedScaleFactor, y: fruit.velocityY * loadedScaleFactor });
+                        Body.setAngularVelocity(body, fruit.angularVelocity);
+                        World.add(world, body);
+                    });
+                    score = loadedState.score;
+                    nextFruitLevel = loadedState.nextFruitLevel;
+                    spawnCurrentFruit(); 
+                    spawnNextFruit(); 
+                } else {
+                    console.log("Starting new game...");
+                    score = 0;
+                    spawnNextFruit(); 
+                    spawnCurrentFruit(); 
+                    spawnNextFruit(); 
+                }
+                updateScore(score); 
+
+
+                Render.run(render);
+                Runner.run(runner, engine);
+
+                Events.on(render, 'afterRender', () => {
+                    const context = render.context;
+                    const bodies = Composite.allBodies(world);
+
+                    context.save(); 
+                    context.textAlign = 'center';
+                    context.textBaseline = 'middle';
+                    
+                    bodies.forEach(body => {
+                        if (body.label !== 'fruit') return;
+
+                        const fruitData = FRUITS[body.fruitLevel];
+                        if (fruitData) {
+                            const scaledRadius = fruitData.baseRadius * scaleFactor;
+                            const size = scaledRadius * EMOJI_SCALE_FACTOR;
+                            context.font = `${size}px Arial`;
+                            context.translate(body.position.x, body.position.y);
+                            context.rotate(body.angle);
+                            context.fillText(fruitData.emoji, 0, 0);
+                            context.rotate(-body.angle);
+                            context.translate(-body.position.x, -body.position.y);
+                        }
+                    });
+
+                    context.restore(); 
+                });
                 
-                bodiesToRemoveSet.clear();
-                bodiesToAddArray = [];
-                currentFruitBody = null; // Ensure no ghost fruit
+                addEventListeners();
+            }
 
-                // 7. Reset physics event listeners
-                Events.off(engine, 'collisionStart', handleCollision);
-                Events.off(engine, 'afterUpdate', processMergesAndCheckGameOver);
-                Events.on(engine, 'collisionStart', handleCollision);
-                Events.on(engine, 'afterUpdate', processMergesAndCheckGameOver);
+            // --- Fruit Creation ---
+            
+            function createFruitBody(x, y, level, options = {}) {
+                const fruitData = FRUITS[level];
+                if (!fruitData) return null;
 
-                // 8. MODIFICATION: Start the physics runner HERE.
-                // This command both associates the runner and engine AND starts it.
-                Matter.Runner.run(runner, engine);
+                const bodyOptions = {
+                    label: 'fruit',
+                    fruitLevel: level,
+                    friction: 0.3,
+                    restitution: 0.2,
+                    density: 0.001,
+                    render: {
+                        fillStyle: fruitData.color
+                    },
+                    ...options
+                };
+                
+                const scaledRadius = fruitData.baseRadius * scaleFactor;
+                return Bodies.polygon(x, y, fruitData.sides, scaledRadius, bodyOptions);
+            }
 
-                // 9. Spawn the first fruit
-                nextFruitIndex = Math.floor(Math.random() * STARTING_FRUITS_MAX_INDEX);
-                spawnNextFruit();
+            function spawnCurrentFruit() {
+                currentFruitLevel = nextFruitLevel;
+                const fruitData = FRUITS[currentFruitLevel];
+                const scaledRadius = fruitData.baseRadius * scaleFactor;
+                
+                previewFruitEl.style.width = `${scaledRadius * 2}px`;
+                previewFruitEl.style.height = `${scaledRadius * 2}px`;
+                previewFruitEl.style.backgroundColor = fruitData.color;
+                
+                previewFruitEl.style.fontSize = `${scaledRadius * EMOJI_SCALE_FACTOR}px`; 
+                previewFruitEl.textContent = fruitData.emoji;
+                
+                previewFruitEl.style.top = `${headerHeight + dropAreaY - scaledRadius}px`;
+                
+                const clipPath = fruitData.clipPath || POLYGON_CLIP_PATHS['circle'];
+                previewFruitEl.style.clipPath = clipPath;
+                previewFruitEl.style.borderRadius = clipPath === POLYGON_CLIP_PATHS['circle'] ? '50%' : '0';
+
+                moveFruit(currentPreviewX, true); 
             }
 
             function spawnNextFruit() {
-                currentFruitIndex = nextFruitIndex;
-                nextFruitIndex = Math.floor(Math.random() * STARTING_FRUITS_MAX_INDEX);
-
-                updateNextFruitDisplay(FRUITS[nextFruitIndex]);
-
-                const fruit = FRUITS[currentFruitIndex];
-                const x = boxWidth / 2; // Start in center
-                const y = headerHeight + fruit.radius;
-
-                currentFruitBody = createFruitBody(x, y, currentFruitIndex);
-                Composite.add(engine.world, currentFruitBody);
-                
-                // Show indicator line
-                indicatorLine.style.left = `${x}px`;
-                indicatorLine.classList.add('visible');
-
-                // Add pointer event listeners
-                gameContainer.addEventListener('pointerdown', handlePointerDown);
-                gameContainer.addEventListener('pointermove', handlePointerMove);
-                gameContainer.addEventListener('pointerup', handlePointerUp);
-                
-                disableDrop = false;
-            }
-
-            function createFruitBody(x, y, index) {
-                const fruit = FRUITS[index];
-                return Bodies.circle(x, y, fruit.radius, {
-                    label: 'fruit',
-                    isStatic: true, // Starts static
-                    restitution: 0.3,
-                    friction: 0.1,
-                    density: 0.001,
-                    render: {
-                        fillStyle: fruit.color,
-                        strokeStyle: 'rgba(0,0,0,0.2)',
-                        lineWidth: 2
-                    },
-                    // Custom properties
-                    fruitIndex: index,
-                    fruitName: fruit.name
-                });
+                nextFruitLevel = Math.floor(Math.random() * STARTING_FRUIT_LEVELS);
+                nextFruitEl.textContent = FRUITS[nextFruitLevel].emoji;
             }
             
-            function moveFruit(pointerX) {
-                if (!currentFruitBody || disableDrop) return;
+            // --- Game Controls (for the DIV) ---
+
+            function moveFruit(clientX, isInternalCall = false) {
+                if (isGameOver) return;
+
+                const fruitData = FRUITS[currentFruitLevel];
+                const scaledRadius = fruitData.baseRadius * scaleFactor;
+                let x;
+
+                if (isInternalCall) {
+                    x = clientX; 
+                } else {
+                    const rect = gameWrapper.getBoundingClientRect();
+                    x = clientX - rect.left; 
+                }
                 
-                const fruit = FRUITS[currentFruitIndex];
-                // Constrain X to be within walls, considering fruit radius
-                const containerRect = gameContainer.getBoundingClientRect();
-                const x = pointerX - containerRect.left; // x relative to game container
-                
-                const clampedX = Math.max(
-                    fruit.radius, 
-                    Math.min(boxWidth - fruit.radius, x)
+                const constrainedX = Math.max(
+                    scaledRadius + wallThickness, // Use scaled values
+                    Math.min(boxWidth - scaledRadius - wallThickness, x) // Use scaled values
                 );
                 
-                Body.setPosition(currentFruitBody, { x: clampedX, y: currentFruitBody.position.y });
-                
-                // Update indicator line
-                indicatorLine.style.left = `${clampedX}px`;
+                currentPreviewX = constrainedX;
+                previewFruitEl.style.transform = `translateX(${constrainedX - boxWidth / 2}px) translateX(-50%)`;
             }
 
             function dropFruit() {
-                if (!currentFruitBody || disableDrop) return;
-                
-                disableDrop = true; // Prevent multiple drops
-                
-                // Make it dynamic
-                Body.setStatic(currentFruitBody, false);
-                
-                // Remove indicator
-                indicatorLine.classList.remove('visible');
-                
-                // Remove pointer event listeners
-                gameContainer.removeEventListener('pointerdown', handlePointerDown);
-                gameContainer.removeEventListener('pointermove', handlePointerMove);
-                gameContainer.removeEventListener('pointerup', handlePointerUp);
-                
-                currentFruitBody = null; // We no longer control this fruit
+                if (isGameOver || isDropping) return;
 
-                // Spawn next fruit after a short delay
-                setTimeout(spawnNextFruit, 600);
-            }
-
-            // --- Event Handlers (to allow removal) ---
-            function handlePointerDown(e) { 
-                e.preventDefault(); 
+                isDropping = true;
                 
-                // Safely start audio context
-                try {
-                    if (typeof Tone !== 'undefined' && Tone.context && Tone.context.state !== 'running') {
-                        Tone.start();
-                    }
-                } catch (e) {
-                    console.error("Failed to start audio context:", e);
+                const droppedFruit = createFruitBody(
+                    currentPreviewX, 
+                    dropAreaY,
+                    currentFruitLevel
+                );
+                
+                if (!droppedFruit) {
+                    isDropping = false;
+                    return;
                 }
                 
-                moveFruit(e.clientX); 
-            }
-            function handlePointerMove(e) { e.preventDefault(); moveFruit(e.clientX); }
-            function handlePointerUp(e) { e.preventDefault(); dropFruit(); }
-            
-
-            function handleCollision(event) {
-                if (!engine || !event.pairs) return;
-
-                const pairs = event.pairs;
-                for (let i = 0; i < pairs.length; i++) {
-                    const pair = pairs[i];
-                    const { bodyA, bodyB } = pair;
-
-                    if (bodyA.label === 'fruit' && bodyB.label === 'fruit' &&
-                        bodyA.fruitIndex === bodyB.fruitIndex && // Same fruit type
-                        bodyA.fruitIndex < MAX_FRUIT_INDEX && // Not the max fruit
-                        !bodiesToRemoveSet.has(bodyA) && // Not already marked for removal
-                        !bodiesToRemoveSet.has(bodyB)) 
-                    {
-                        // Mark for removal
-                        bodiesToRemoveSet.add(bodyA);
-                        bodiesToRemoveSet.add(bodyB);
-
-                        // Schedule new fruit to be added
-                        const newIndex = bodyA.fruitIndex + 1;
-                        const newX = (bodyA.position.x + bodyB.position.m.y) / 2;
-                        const newY = (bodyA.position.y + bodyB.position.y) / 2;
-                        
-                        bodiesToAddArray.push({ x: newX, y: newY, index: newIndex });
-                        
-                        // Update score
-                        updateScore(FRUITS[newIndex].score);
-                    }
-                }
-            }
-            
-            function processMergesAndCheckGameOver() {
-                if (!engine || !engine.world) return;
+                World.add(world, droppedFruit);
                 
-                let didMerge = false;
-                
-                // 1. Process merges (add/remove bodies)
-                if (bodiesToRemoveSet.size > 0 || bodiesToAddArray.length > 0) {
-                    
-                    // Remove bodies
-                    bodiesToRemoveSet.forEach(body => {
-                        Composite.remove(engine.world, body);
-                    });
-                    
-                    // Add new bodies
-                    bodiesToAddArray.forEach(item => {
-                        const newBody = createFruitBody(item.x, item.y, item.index);
-                        Body.setStatic(newBody, false); // Make sure it's dynamic
-                        Composite.add(engine.world, newBody);
-                        didMerge = true;
-                    });
-                    
-                    if (didMerge && navigator.vibrate) {
-                        navigator.vibrate(50); 
-                    }
+                previewFruitEl.style.opacity = '0';
 
-                    // Safely play merge sound
-                    if (didMerge && mergeSynth) {
-                        try {
-                            const now = Tone.now();
-                            mergeSynth.triggerAttackRelease("C4", "8n", now);
-                            mergeSynth.triggerAttackRelease("E4", "8n", now + 0.05);
-                            mergeSynth.triggerAttackRelease("G4", "8n", now + 0.1);
-                        } catch (e) {
-                            console.error("Failed to play merge sound:", e);
+                if (collisionTimeout) clearTimeout(collisionTimeout);
+                collisionTimeout = setTimeout(() => {
+                    if (!isGameOver && droppedFruit && world.bodies.includes(droppedFruit)) {
+                        if (Matter.Collision.collides(droppedFruit, world.bodies.find(b => b.label === 'gameOverLine'))) {
+                            triggerGameOver();
                         }
                     }
+                    collisionTimeout = null;
+                }, 1500);
 
-                    bodiesToRemoveSet.clear();
-                    bodiesToAddArray = [];
+                setTimeout(() => {
+                    if (!isGameOver) {
+                        spawnCurrentFruit(); 
+                        spawnNextFruit(); 
+                        previewFruitEl.style.opacity = '0.8';
+                        isDropping = false;
+                    }
+                }, 300);
+            }
+
+            // --- Confetti Effect ---
+            function createConfetti(x, y, color1, color2) {
+                const numPieces = 25;
+                for (let i = 0; i < numPieces; i++) {
+                    const piece = document.createElement('div');
+                    piece.classList.add('confetti-piece');
+                    
+                    const randomColor = Math.random() < 0.5 ? color1 : color2;
+                    piece.style.backgroundColor = randomColor;
+                    
+                    const pieceSize = 10 * scaleFactor;
+                    piece.style.width = `${pieceSize}px`;
+                    piece.style.height = `${pieceSize}px`;
+
+                    piece.style.left = `${x}px`;
+                    piece.style.top = `${y}px`;
+                    
+                    confettiContainer.appendChild(piece);
+
+                    const angle = Math.random() * Math.PI * 2; 
+                    const distance = (Math.random() * 70 + 40) * scaleFactor; 
+                    const finalX = x + Math.cos(angle) * distance;
+                    const finalY = y + Math.sin(angle) * distance;
+
+                    setTimeout(() => {
+                        piece.style.transform = `translate(${finalX - x}px, ${finalY - y}px) scale(0)`;
+                        piece.style.opacity = '0';
+                    }, 10); 
+
+                    setTimeout(() => {
+                        piece.remove();
+                    }, 800);
                 }
+            }
+            
+            // --- Save Game State ---
+            function saveGameState() {
+                if (isGameOver || !world) return;
 
-                // 2. Check for Game Over
-                if (disableDrop) { // Only check if a fruit is falling or has landed
-                    const bodies = Composite.allBodies(engine.world);
-                    for (let i = 0; i < bodies.length; i++) {
-                        const body = bodies[i];
-                        if (body.label === 'fruit' && !body.isStatic) {
-                            // Check if the top of the fruit is above the deadline
-                            if (body.position.y - body.circleRadius < deadlineY) {
-                                // Check if it's "settled" (moving slowly)
-                                if (body.velocity.x < 0.1 && body.velocity.y < 0.1) {
-                                    endGame();
-                                    return; // Stop checking
-                                }
+                const fruits = Composite.allBodies(world)
+                    .filter(body => body.label === 'fruit')
+                    .map(body => ({
+                        x: body.position.x,
+                        y: body.position.y,
+                        level: body.fruitLevel,
+                        angle: body.angle,
+                        velocityX: body.velocity.x,
+                        velocityY: body.velocity.y,
+                        angularVelocity: body.angularVelocity
+                    }));
+                
+                const gameState = {
+                    fruits: fruits,
+                    score: score,
+                    nextFruitLevel: nextFruitLevel,
+                    boxWidth: boxWidth // Save boxWidth for scaling on load
+                };
+
+                localStorage.setItem(GAME_STATE_KEY, JSON.stringify(gameState));
+            }
+
+
+            // --- Event Listeners ---
+            function addEventListeners() {
+                Events.off(engine, 'collisionStart');
+                Events.off(engine, 'collisionStay');
+                Events.off(engine, 'afterUpdate');
+                
+                // 1. DETECT collisions
+                Events.on(engine, 'collisionStart', (event) => {
+                    if (isGameOver) return;
+                    const pairs = event.pairs;
+                    for (let i = 0; i < pairs.length; i++) {
+                        const pair = pairs[i];
+                        const bodyA = pair.bodyA;
+                        const bodyB = pair.bodyB;
+
+                        if (bodyA.label !== 'fruit' || bodyB.label !== 'fruit') continue;
+                        
+                        if (bodiesToRemoveSet.has(bodyA.id) || bodiesToRemoveSet.has(bodyB.id)) {
+                            continue;
+                        }
+
+                        if (bodyA.fruitLevel === bodyB.fruitLevel) {
+                            const level = bodyA.fruitLevel;
+                            if (level === MAX_FRUIT_LEVEL) continue; 
+                            
+                            const newX = (bodyA.position.x + bodyB.position.x) / 2;
+                            const newY = (bodyA.position.y + bodyB.position.y) / 2;
+                            const nextLevel = level + 1;
+                            
+                            bodiesToAddArray.push({
+                                x: newX,
+                                y: newY,
+                                level: nextLevel,
+                                score: FRUITS[level].score,
+                                color1: FRUITS[level].color, 
+                                color2: FRUITS[nextLevel].color
+                            });
+                            bodiesToRemoveSet.add(bodyA.id);
+                            bodiesToRemoveSet.add(bodyB.id);
+                        }
+                    }
+                });
+                
+                // 2. ACT on collisions
+                Events.on(engine, 'afterUpdate', () => {
+                    if (bodiesToRemoveSet.size > 0) {
+                        const bodiesToRemove = Composite.allBodies(world).filter(body => bodiesToRemoveSet.has(body.id));
+                        bodiesToRemove.forEach(body => {
+                            World.remove(world, body);
+                        });
+                        
+                        let didMerge = false; 
+                        bodiesToAddArray.forEach(data => {
+                            const newFruit = createFruitBody(data.x, data.y, data.level, {
+                                velocity: { x: Common.random(-1, 1), y: -2 } 
+                            });
+                            World.add(world, newFruit);
+                            updateScore(score + data.score); 
+                            createConfetti(data.x, data.y, data.color1, data.color2); 
+                            didMerge = true;
+                        });
+                        
+                        if (didMerge && navigator.vibrate) {
+                            navigator.vibrate(50); 
+                        }
+
+                        bodiesToRemoveSet.clear();
+                        bodiesToAddArray = [];
+                    }
+
+                    if (!isGameOver) {
+                        saveCounter++;
+                        if (saveCounter >= 60) { // Save roughly every second
+                            saveGameState();
+                            saveCounter = 0;
+                        }
+                    }
+                });
+
+                // --- Game Over Check ---
+                Events.on(engine, 'collisionStay', (event) => {
+                    if (isGameOver || isDropping || collisionTimeout) return; 
+                    const pairs = event.pairs;
+                    for (let i = 0; i < pairs.length; i++) {
+                        const pair = pairs[i];
+                        const bodyA = pair.bodyA;
+                        const bodyB = pair.bodyB;
+                        let fruitBody = null;
+
+                        if (bodyA.label === 'gameOverLine' && bodyB.label === 'fruit') fruitBody = bodyB;
+                        if (bodyB.label === 'gameOverLine' && bodyA.label === 'fruit') fruitBody = bodyA;
+
+                        if (fruitBody) {
+                            if (fruitBody.velocity.y < 0.05 && fruitBody.velocity.y > -0.05 && Math.abs(fruitBody.velocity.x) < 0.1) {
+                                triggerGameOver();
+                                break;
                             }
                         }
                     }
+                });
+                
+                // --- UI Event Listeners ---
+                gameWrapper.addEventListener('pointerdown', handlePointerDown, { passive: false });
+                gameWrapper.addEventListener('pointermove', handlePointerMove, { passive: false });
+                gameWrapper.addEventListener('pointerup', handlePointerUp, { passive: false });
+                restartButton.addEventListener('click', handleRestart);
+                newGameButton.addEventListener('click', handleRestart); 
+            }
+            
+            // --- Event Handlers (to allow removal) ---
+            function handlePointerDown(e) { e.preventDefault(); moveFruit(e.clientX); }
+            function handlePointerMove(e) { e.preventDefault(); moveFruit(e.clientX); }
+            function handlePointerUp(e) { e.preventDefault(); dropFruit(); }
+            
+            function handleRestart() {
+                localStorage.removeItem(GAME_STATE_KEY);
+                
+                Runner.stop(runner);
+                Render.stop(render);
+                gameWrapper.removeEventListener('pointerdown', handlePointerDown);
+                gameWrapper.removeEventListener('pointermove', handlePointerMove);
+                gameWrapper.removeEventListener('pointerup', handlePointerUp);
+                restartButton.removeEventListener('click', handleRestart);
+                newGameButton.removeEventListener('click', handleRestart); 
+                Events.off(engine);
+                Events.off(render);
+                World.clear(world, false);
+                Composite.clear(world, false, true);
+                Engine.clear(engine);
+                if (render.canvas) {
+                    render.canvas.remove();
                 }
+                initGame(); 
             }
 
-            function updateScore(pointsToAdd) {
-                if (pointsToAdd > 0) {
-                    score += pointsToAdd;
-                } else {
-                    score = 0; // Reset score
-                }
+            
+            // --- Utility Functions ---
+            function updateScore(newScore) {
+                score = newScore;
                 scoreEl.textContent = score;
 
                 if (score > highScore) {
                     highScore = score;
                     highScoreEl.textContent = highScore;
-                    localStorage.setItem(HIGHSCORE_KEY, highScore);
                 }
             }
             
-            function updateNextFruitDisplay(fruit) {
-                nextFruitContainer.style.backgroundColor = fruit.color;
-                nextFruitContainer.style.width = `${fruit.radius * 2 * 0.4}px`; // Scale down for display
-                nextFruitContainer.style.height = `${fruit.radius * 2 * 0.4}px`;
-            }
-
-            // --- Simplified endGame ---
-            function endGame() {
-                // 1. Stop the physics runner
-                if (runner) {
-                    Matter.Runner.stop(runner);
-                }
-                
-                // 2. Stop physics events
-                Events.off(engine, 'collisionStart', handleCollision);
-                Events.off(engine, 'afterUpdate', processMergesAndCheckGameOver);
-                
-                // 3. Remove event listeners
-                gameContainer.removeEventListener('pointerdown', handlePointerDown);
-                gameContainer.removeEventListener('pointermove', handlePointerMove);
-                gameContainer.removeEventListener('pointerup', handlePointerUp);
-
-                // 4. Show Game Over modal
+            function triggerGameOver() {
+                if (isGameOver) return; 
+                isGameOver = true;
+                Runner.stop(runner);
                 finalScoreEl.textContent = score;
+
+                localStorage.setItem(HIGHSCORE_KEY, highScore.toString());
+                localStorage.removeItem(GAME_STATE_KEY);
+
                 gameOverModal.classList.remove('hidden');
-                document.body.classList.add('modal-open');
-                
-                // 5. Hide indicator line
-                if (indicatorLine) {
-                    indicatorLine.classList.remove('visible');
-                }
-                
-                // 6. Clear any remaining floating fruit
-                if (currentFruitBody) {
-                    Composite.remove(engine.world, currentFruitBody);
-                    currentFruitBody = null;
-                }
             }
-            
-            // Handle window resize
-            let resizeTimeout;
-            window.onresize = () => {
-                // Debounce resize
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(()re) => {
-                    // Re-setup dimensions
-                    setupGameDimensions();
-                    
-                    // Update renderer
-                    render.options.width = boxWidth;
-                    render.options.height = boxHeight;
-                    if (render.canvas) {
-                        render.canvas.width = boxWidth * window.devicePixelRatio;
-                        render.canvas.height = boxHeight * window.devicePixelRatio;
-                        render.canvas.style.width = `${boxWidth}px`;
-                        render.canvas.style.height = `${boxHeight}px`;
+
+            // --- Handle Window Resize ---
+            function setupResizeObserver() {
+                const resizeObserver = new ResizeObserver(entries => {
+                    for (let entry of entries) {
+                        if (entry.target === gameWrapper) {
+                            
+                            const newWidth = entry.contentRect.width;
+                            const newHeight = entry.contentRect.height; // Wrapper height
+                            
+                            // Check for 0 or invalid dimensions, or no change
+                            if (!newWidth || !newHeight || newWidth === boxWidth) {
+                                continue;
+                            }
+                            
+                            if (!isGameOver && world && Composite.allBodies(world).length > 0) {
+                                saveGameState();
+                            }
+                            
+                            Runner.stop(runner);
+                            Render.stop(render);
+                            gameWrapper.removeEventListener('pointerdown', handlePointerDown);
+                            gameWrapper.removeEventListener('pointermove', handlePointerMove);
+                            gameWrapper.removeEventListener('pointerup', handlePointerUp);
+                            restartButton.removeEventListener('click', handleRestart);
+                            newGameButton.removeEventListener('click', handleRestart); 
+                            Events.off(engine);
+                            Events.off(render);
+                            World.clear(world, false);
+                            Composite.clear(world, false, true);
+                            Engine.clear(engine);
+                            if (render.canvas) {
+                                render.canvas.remove();
+                            }
+                            
+                            initGame();
+                        }
                     }
-
-                    // We need to restart the game as wall positions depend on dimensions
-                    endGame();
-                    // Put user back on the "game over" screen, from which they can restart
-                    finalScoreEl.textContent = score;
-                    gameOverModal.classList.remove('hidden');
-                    document.body.classList.add('modal-open');
-                }, 250);
-            };
-
-        })();
+                });
+                
+                resizeObserver.observe(gameWrapper);
+            }
+        
+        }; // End of window.onload
     </script>
 </body>
 </html>
-
-
