@@ -183,6 +183,9 @@
     </div>
 
     <script type="module">
+        // Import Web Audio BGM controller
+        import { createBgmController } from './audio/web-audio-bgm.js';
+
         // Wait for the *entire page* to load
         window.onload = () => {
             
@@ -263,8 +266,9 @@
             // --- Audio System ---
             // Sound effects are generated programmatically using the Web Audio API.
             // Background music is from Pixabay (see assets/README.md for details)
+            // Using Web Audio API wrapper for reliable cross-browser volume control
             let audioContext = null;
-            let backgroundMusic = null;
+            let bgmController = null;
             let isMusicPaused = false;
 
             function initAudioContext() {
@@ -274,15 +278,22 @@
             }
             
             function initBackgroundMusic() {
-                if (!backgroundMusic) {
-                    backgroundMusic = new Audio('assets/children-music-loop-creative-fun-262427.mp3');
-                    backgroundMusic.loop = true;
-                    backgroundMusic.volume = 0.05;
-                    
-                    // Handle audio loading errors gracefully
-                    backgroundMusic.addEventListener('error', (e) => {
-                        console.warn('Background music could not be loaded. Please check assets/README.md for download instructions.');
-                    });
+                if (!bgmController) {
+                    try {
+                        // Create Web Audio BGM controller with default gain of 0.25 (~-12dB)
+                        bgmController = createBgmController({
+                            audioElOrSrc: 'assets/children-music-loop-creative-fun-262427.mp3',
+                            defaultGain: 0.25,  // Much louder than previous 0.05, but still pleasant
+                            loop: true
+                        });
+                        
+                        // Setup unlock on user gesture for iOS Safari
+                        bgmController.unlockOnUserGesture();
+                        
+                        console.log('Background music controller initialized');
+                    } catch (error) {
+                        console.warn('Background music could not be initialized:', error);
+                    }
                 }
             }
 
@@ -340,28 +351,26 @@
             // Start background music
             function startBackgroundMusic() {
                 initBackgroundMusic();
-                if (backgroundMusic && !isMusicPaused) {
-                    const playPromise = backgroundMusic.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch(error => {
-                            console.warn('Autoplay was prevented. User interaction required.');
-                        });
-                    }
+                if (bgmController && !isMusicPaused) {
+                    bgmController.play().catch(error => {
+                        console.warn('Autoplay was prevented. User interaction required.');
+                    });
                 }
             }
 
             // Stop background music with fade out
             function stopBackgroundMusic() {
-                if (backgroundMusic && !backgroundMusic.paused) {
+                if (bgmController && bgmController.isPlaying()) {
                     isMusicPaused = true;
                     
-                    // Fade out effect
+                    // Fade out effect using Web Audio gain
                     const fadeOutInterval = setInterval(() => {
-                        if (backgroundMusic.volume > 0.01) {
-                            backgroundMusic.volume -= 0.01;
+                        const currentGain = bgmController.getGainLinear();
+                        if (currentGain > 0.01) {
+                            bgmController.setGainLinear(currentGain - 0.01);
                         } else {
-                            backgroundMusic.pause();
-                            backgroundMusic.volume = 0.05; // Reset volume for next play
+                            bgmController.pause();
+                            bgmController.setGainLinear(0.25); // Reset gain for next play
                             clearInterval(fadeOutInterval);
                         }
                     }, 50);
@@ -370,15 +379,12 @@
             
             // Resume background music (for focus events)
             function resumeBackgroundMusic() {
-                if (backgroundMusic && isMusicPaused && !isGameOver) {
+                if (bgmController && isMusicPaused && !isGameOver) {
                     isMusicPaused = false;
-                    backgroundMusic.volume = 0.05;
-                    const playPromise = backgroundMusic.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch(error => {
-                            console.warn('Could not resume music:', error);
-                        });
-                    }
+                    bgmController.setGainLinear(0.25);
+                    bgmController.play().catch(error => {
+                        console.warn('Could not resume music:', error);
+                    });
                 }
             }
 
@@ -959,8 +965,8 @@
                 document.addEventListener('visibilitychange', () => {
                     if (document.hidden) {
                         // Page lost focus/visibility
-                        if (backgroundMusic && !backgroundMusic.paused) {
-                            backgroundMusic.pause();
+                        if (bgmController && bgmController.isPlaying()) {
+                            bgmController.pause();
                             isMusicPaused = true;
                             if (startResumeButton && !startModal.classList.contains('hidden')) {
                                 startResumeButton.textContent = 'Resume';
@@ -969,7 +975,7 @@
                     } else {
                         // Page gained focus/visibility
                         resumeBackgroundMusic();
-                        if (backgroundMusic && !backgroundMusic.paused && startResumeButton && !startModal.classList.contains('hidden')) {
+                        if (bgmController && bgmController.isPlaying() && startResumeButton && !startModal.classList.contains('hidden')) {
                             startResumeButton.textContent = 'Pause';
                         }
                     }
@@ -977,8 +983,8 @@
                 
                 // Handle window focus/blur events (app switching)
                 window.addEventListener('blur', () => {
-                    if (backgroundMusic && !backgroundMusic.paused) {
-                        backgroundMusic.pause();
+                    if (bgmController && bgmController.isPlaying()) {
+                        bgmController.pause();
                         isMusicPaused = true;
                         if (startResumeButton && !startModal.classList.contains('hidden')) {
                             startResumeButton.textContent = 'Resume';
@@ -988,7 +994,7 @@
                 
                 window.addEventListener('focus', () => {
                     resumeBackgroundMusic();
-                    if (backgroundMusic && !backgroundMusic.paused && startResumeButton && !startModal.classList.contains('hidden')) {
+                    if (bgmController && bgmController.isPlaying() && startResumeButton && !startModal.classList.contains('hidden')) {
                         startResumeButton.textContent = 'Pause';
                     }
                 });
@@ -1005,14 +1011,13 @@
                 
                 // Modal is visible by default, add click handler
                 startResumeButton.addEventListener('click', () => {
-                    if (!backgroundMusic) {
+                    if (!bgmController) {
                         // First click - initialize and start music
                         initBackgroundMusic();
-                        backgroundMusic.volume = backgroundMusic.volume || 0.05;
                         startBackgroundMusic();
                         startModal.classList.add('hidden');
                         isMusicPaused = false;
-                    } else if (backgroundMusic.paused) {
+                    } else if (!bgmController.isPlaying()) {
                         // Music is paused - resume it
                         resumeBackgroundMusic();
                         startResumeButton.textContent = 'Pause';
