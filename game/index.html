@@ -277,7 +277,7 @@
                 if (!backgroundMusic) {
                     backgroundMusic = new Audio('assets/children-music-loop-creative-fun-262427.mp3');
                     backgroundMusic.loop = true;
-                    backgroundMusic.volume = 0.4;
+                    backgroundMusic.volume = 0.1;
                     
                     // Handle audio loading errors gracefully
                     backgroundMusic.addEventListener('error', (e) => {
@@ -361,7 +361,7 @@
                             backgroundMusic.volume -= 0.05;
                         } else {
                             backgroundMusic.pause();
-                            backgroundMusic.volume = 0.4; // Reset volume for next play
+                            backgroundMusic.volume = 0.1; // Reset volume for next play
                             clearInterval(fadeOutInterval);
                         }
                     }, 50);
@@ -372,7 +372,7 @@
             function resumeBackgroundMusic() {
                 if (backgroundMusic && isMusicPaused && !isGameOver) {
                     isMusicPaused = false;
-                    backgroundMusic.volume = 0.4;
+                    backgroundMusic.volume = 0.1;
                     const playPromise = backgroundMusic.play();
                     if (playPromise !== undefined) {
                         playPromise.catch(error => {
@@ -1008,7 +1008,7 @@
                     if (!backgroundMusic) {
                         // First click - initialize and start music
                         initBackgroundMusic();
-                        backgroundMusic.volume = backgroundMusic.volume || 0.4;
+                        backgroundMusic.volume = backgroundMusic.volume || 0.1;
                         startBackgroundMusic();
                         startModal.classList.add('hidden');
                         isMusicPaused = false;
