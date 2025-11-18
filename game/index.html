@@ -1382,48 +1382,156 @@
             }
 
             // --- Handle Window Resize ---
+            function handleResize(newWidth, newHeight) {
+                if (!newWidth || !newHeight || newWidth === boxWidth) {
+                    return;
+                }
+                
+                // Calculate the scale factor
+                const oldWidth = boxWidth;
+                const oldHeight = boxHeight;
+                const resizeScale = newWidth / oldWidth;
+                
+                // Update dimensions
+                headerHeight = headerEl.clientHeight;
+                boxWidth = newWidth;
+                boxHeight = newHeight - headerHeight;
+                
+                scaleFactor = boxWidth / NATIVE_WIDTH;
+                wallThickness = BASE_WALL_THICKNESS * scaleFactor;
+                
+                canvasWrapper.style.top = `${headerHeight}px`;
+                canvasWrapper.style.height = `${boxHeight}px`;
+                confettiContainer.style.top = `${headerHeight}px`;
+                confettiContainer.style.height = `${boxHeight}px`;
+                
+                gameOverLineY = boxHeight * GAME_OVER_LINE_Y_PERCENT;
+                dropAreaY = boxHeight * DROP_AREA_Y_PERCENT;
+                
+                // Update the canvas dimensions
+                if (render && render.canvas) {
+                    render.canvas.width = boxWidth;
+                    render.canvas.height = boxHeight;
+                    render.options.width = boxWidth;
+                    render.options.height = boxHeight;
+                    render.bounds.max.x = boxWidth;
+                    render.bounds.max.y = boxHeight;
+                }
+                
+                // Scale all existing bodies
+                if (world) {
+                    const allBodies = Composite.allBodies(world);
+                    const staticBodiesToRemove = [];
+                    const fruitBodies = [];
+                    
+                    // Collect bodies and scale dynamic bodies
+                    allBodies.forEach(body => {
+                        if (body.label === 'fruit') {
+                            fruitBodies.push(body);
+                            
+                            // Scale position
+                            Body.setPosition(body, {
+                                x: body.position.x * resizeScale,
+                                y: body.position.y * resizeScale
+                            });
+                            
+                            // Scale velocity
+                            Body.setVelocity(body, {
+                                x: body.velocity.x * resizeScale,
+                                y: body.velocity.y * resizeScale
+                            });
+                            
+                            // Scale the fruit body
+                            const fruitData = FRUITS[body.fruitLevel];
+                            const newScaledRadius = fruitData.baseRadius * scaleFactor;
+                            const oldScaledRadius = fruitData.baseRadius * (oldWidth / NATIVE_WIDTH);
+                            const scaleRatio = newScaledRadius / oldScaledRadius;
+                            
+                            Body.scale(body, scaleRatio, scaleRatio);
+                        } else if (body.isStatic) {
+                            // Mark static bodies for removal
+                            staticBodiesToRemove.push(body);
+                        }
+                    });
+                    
+                    // Remove old static bodies
+                    staticBodiesToRemove.forEach(body => {
+                        World.remove(world, body);
+                    });
+                    
+                    // Recreate static bodies with new dimensions
+                    const wallOptions = {
+                        isStatic: true,
+                        restitution: 0.1,
+                        friction: 0.2,
+                        render: { fillStyle: '#b45309' }
+                    };
+                    
+                    // Only add ground wall if game is not over
+                    if (!isGameOver) {
+                        World.add(world, Bodies.rectangle(
+                            boxWidth / 2, 
+                            boxHeight - wallThickness / 2, 
+                            boxWidth, 
+                            wallThickness, 
+                            { ...wallOptions, label: 'ground' }
+                        ));
+                    }
+                    
+                    World.add(world, [
+                        Bodies.rectangle(
+                            wallThickness / 2, 
+                            boxHeight / 2, 
+                            wallThickness, 
+                            boxHeight, 
+                            { ...wallOptions, label: 'wall-left' }
+                        ),
+                        Bodies.rectangle(
+                            boxWidth - wallThickness / 2, 
+                            boxHeight / 2, 
+                            wallThickness, 
+                            boxHeight, 
+                            { ...wallOptions, label: 'wall-right' }
+                        )
+                    ]);
+                    
+                    // Recreate game over line
+                    const gameOverLine = Bodies.rectangle(
+                        boxWidth / 2,
+                        gameOverLineY,
+                        boxWidth,
+                        2,
+                        {
+                            isStatic: true,
+                            isSensor: true,
+                            label: 'gameOverLine',
+                            render: { fillStyle: '#FF0000', opacity: 0.5 }
+                        }
+                    );
+                    World.add(world, gameOverLine);
+                }
+                
+                // Update preview fruit position and size
+                currentPreviewX = currentPreviewX * resizeScale;
+                if (!isGameOver && !isDropping) {
+                    spawnCurrentFruit();
+                }
+                
+                // Save the updated game state
+                if (!isGameOver && world && Composite.allBodies(world).length > 0) {
+                    saveGameState();
+                }
+            }
+            
             function setupResizeObserver() {
                 const resizeObserver = new ResizeObserver(entries => {
                     for (let entry of entries) {
                         if (entry.target === gameWrapper) {
-                            
                             const newWidth = entry.contentRect.width;
-                            const newHeight = entry.contentRect.height; // Wrapper height
+                            const newHeight = entry.contentRect.height;
                             
-                            // Check for 0 or invalid dimensions, or no change
-                            if (!newWidth || !newHeight || newWidth === boxWidth) {
-                                continue;
-                            }
-                            
-                            if (!isGameOver && world && Composite.allBodies(world).length > 0) {
-                                saveGameState();
-                            }
-                            
-                            // Stop background music before reinitializing
-                            stopBackgroundMusic();
-                            
-                            Runner.stop(runner);
-                            Render.stop(render);
-                            gameWrapper.removeEventListener('pointerdown', handlePointerDown);
-                            gameWrapper.removeEventListener('pointermove', handlePointerMove);
-                            gameWrapper.removeEventListener('pointerup', handlePointerUp);
-                            headerEl.removeEventListener('pointerdown', stopToolbarEventBubbling);
-                            headerEl.removeEventListener('pointermove', stopToolbarEventBubbling);
-                            headerEl.removeEventListener('pointerup', stopToolbarEventBubbling);
-                            restartButton.removeEventListener('click', handleRestart);
-                            newGameButton.removeEventListener('click', showRestartConfirmation);
-                            restartConfirmYes.removeEventListener('click', confirmRestart);
-                            restartConfirmNo.removeEventListener('click', cancelRestart); 
-                            Events.off(engine);
-                            Events.off(render);
-                            World.clear(world, false);
-                            Composite.clear(world, false, true);
-                            Engine.clear(engine);
-                            if (render.canvas) {
-                                render.canvas.remove();
-                            }
-                            
-                            initGame();
+                            // Handle resize without reinitializing
+                            handleResize(newWidth, newHeight);
                         } else if (entry.target === fruitEvolutionRow) {
                             // Rescale icons when row size changes
                             scaleEvolutionIcons();
