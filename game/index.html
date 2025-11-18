@@ -393,6 +393,7 @@
             const GAME_OVER_LINE_Y_PERCENT = 0.18; 
             const DROP_AREA_Y_PERCENT = 0.1; 
             const BASE_WALL_THICKNESS = 40; 
+            const DROP_COOLDOWN_MS = 500; // Cooldown period between fruit drops
             const HIGHSCORE_KEY = 'fruit-merge-highscore';
             const GAME_STATE_KEY = 'fruit-merge-gamestate';
             const ACHIEVEMENTS_KEY = 'fruit-merge-achievements';
@@ -413,6 +414,7 @@
             let nextFruitLevel = 0;
             let isGameOver = false;
             let isDropping = false; 
+            let lastDropTime = 0; // Track the time of the last fruit drop
             let collisionTimeout = null;
             let currentPreviewX = 0; 
             let saveCounter = 0; 
@@ -722,6 +724,7 @@
 
                 isGameOver = false;
                 isDropping = false;
+                lastDropTime = 0; // Reset drop time on new game
                 saveCounter = 0;
                 currentGameMaxFruit = -1; // Reset current game max on new game
                 
@@ -988,6 +991,12 @@
             function dropFruit() {
                 if (isGameOver || isDropping) return;
 
+                // Check cooldown period to limit drop frequency
+                const currentTime = Date.now();
+                if (currentTime - lastDropTime < DROP_COOLDOWN_MS) {
+                    return; // Still in cooldown period
+                }
+
                 // Check if any fruits are already resting above the game over line
                 const gameOverLine = world.bodies.find(b => b.label === 'gameOverLine');
                 if (gameOverLine) {
@@ -1006,6 +1015,7 @@
                 }
 
                 isDropping = true;
+                lastDropTime = currentTime; // Record the drop time
                 
                 const droppedFruit = createFruitBody(
                     currentPreviewX, 
@@ -1135,6 +1145,13 @@
                         if (bodyA.fruitLevel === bodyB.fruitLevel) {
                             const level = bodyA.fruitLevel;
                             if (level === MAX_FRUIT_LEVEL) continue; 
+                            
+                            // Prevent merging if both fruits are above the game over line
+                            const bodyAAboveLine = bodyA.position.y < gameOverLineY;
+                            const bodyBAboveLine = bodyB.position.y < gameOverLineY;
+                            if (bodyAAboveLine && bodyBAboveLine) {
+                                continue; // Skip this merge
+                            }
                             
                             const newX = (bodyA.position.x + bodyB.position.x) / 2;
                             const newY = (bodyA.position.y + bodyB.position.y) / 2;
