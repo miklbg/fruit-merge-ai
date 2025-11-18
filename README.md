@@ -56,10 +56,18 @@ Background music is sourced from Pixabay:
 ## 🛠️ Technical Details
 
 - **No Build Required**: Pure HTML/CSS/JavaScript - just open and play!
-- **Styling**: Tailwind CSS (loaded via CDN)
+- **Styling**: Tailwind CSS (pre-built and included locally)
 - **Physics**: Matter.js 0.19.0 (loaded via CDN)
 - **Storage**: LocalStorage for game state and high scores
 - **Browser Compatibility**: Modern browsers with HTML5 Audio and Canvas support
+
+### Development
+
+If you need to rebuild the Tailwind CSS (e.g., after modifying styles):
+```bash
+npm install
+npm run build:css
+```
 
 ## 🚀 Quick Start
 

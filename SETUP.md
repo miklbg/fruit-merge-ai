@@ -52,10 +52,24 @@ php -S localhost:8080
 
 ## 📦 What's Included
 
-All dependencies are loaded via CDN - no installation needed:
-- **Tailwind CSS** - For styling
-- **Matter.js** - For physics simulation
+All dependencies are included - no installation needed:
+- **Tailwind CSS** - Pre-built CSS included locally in `game/css/tailwind.min.css`
+- **Matter.js** - For physics simulation (loaded via CDN)
 - **Background Music** - Pre-loaded audio file in `assets/`
+
+### Development Setup (Optional)
+
+If you want to modify Tailwind styles, you'll need Node.js and npm:
+```bash
+# Install dependencies
+npm install
+
+# Rebuild Tailwind CSS after making changes
+npm run build:css
+
+# Or watch for changes and rebuild automatically
+npm run watch:css
+```
 
 ## 🔊 Audio Setup
 

@@ -4,3 +4,8 @@ screenshots/
 # Temporary files
 *.log
 .DS_Store
+
+# Node modules and build files
+node_modules/
+package-lock.json
+tailwind.css
