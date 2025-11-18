@@ -562,8 +562,8 @@
 
                     loadedState.fruits.forEach(fruit => {
                         const body = createFruitBody(
-                            fruit.x * loadedScaleFactor * 1.1, 
-                            fruit.y * loadedScaleFactor * 1.1, 
+                            fruit.x * loadedScaleFactor, 
+                            fruit.y * loadedScaleFactor, 
                             fruit.level
                         );
                         
@@ -604,8 +604,8 @@
                             const img = fruitImages[body.fruitLevel];
                             
                             if (img && img.complete) {
-                                // Increase image size to 2.4x the radius to fill the circle better
-                                const imageSize = scaledRadius * 2.4;
+                                // Increase image size to 2.6x the radius to fill the circle better
+                                const imageSize = scaledRadius * 2.6;
                                 const offset = imageSize / 2;
                                 context.save();
                                 context.translate(body.position.x, body.position.y);
