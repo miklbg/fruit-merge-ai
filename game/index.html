@@ -172,6 +172,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            flex-wrap: nowrap;
             gap: 4px;
             overflow-x: hidden;
             overflow-y: hidden;
@@ -243,8 +244,8 @@
                     <div class="flex items-center gap-4">
                         <div>
                             <span class="text-sm opacity-80">Next</span>
-                            <div id="next-fruit" class="flex justify-end items-center" style="height: 48px;">
-                                <img id="next-fruit-img" src="" alt="Next fruit" style="max-height: 48px; max-width: 48px; object-fit: contain;">
+                            <div id="next-fruit" class="flex justify-end items-center" style="height: 36px;">
+                                <img id="next-fruit-img" src="" alt="Next fruit" style="max-height: 36px; max-width: 36px; object-fit: contain;">
                             </div>
                         </div>
                         <!-- Restart Icon Button -->
@@ -783,6 +784,10 @@
                         nextFruitLevel = loadedState.currentFruitLevel;
                         spawnCurrentFruit(); // This will set currentFruitLevel = nextFruitLevel
                         nextFruitLevel = loadedState.nextFruitLevel; // Then restore the actual next fruit
+                        // Update the next fruit display with the restored value
+                        const nextFruitData = FRUITS[nextFruitLevel];
+                        nextFruitImgEl.src = nextFruitData.imagePath;
+                        nextFruitImgEl.style.display = 'block';
                     } else {
                         // Fallback for old save data without currentFruitLevel
                         nextFruitLevel = loadedState.nextFruitLevel;
@@ -791,10 +796,7 @@
                     }
                     
                     // Also mark the next fruit as achieved and update current game max
-                    updateEvolutionRow(nextFruitLevel);
-                    
-                    spawnCurrentFruit(); 
-                    spawnNextFruit(); 
+                    updateEvolutionRow(nextFruitLevel); 
                 } else {
                     console.log("Starting new game...");
                     score = 0;
