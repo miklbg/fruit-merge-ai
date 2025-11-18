@@ -231,7 +231,43 @@ npx http-server -p 8080
 - [ ] Verify: Shows "Start" not "Resume"
 - [ ] Verify: Game starts fresh
 
-### 5. Responsive Design Tests
+### 5. Fruit Evolution Row Tests
+
+**Test: Evolution Row Display**
+- [ ] Start a new game
+- [ ] Verify: Evolution row appears at bottom of game area
+- [ ] Verify: Row shows all 10 fruit types in order (blueberry → watermelon)
+- [ ] Verify: First fruit (blueberry) is unlocked and clear
+- [ ] Verify: All other fruits are blurred and semi-transparent
+- [ ] Verify: Row has a white gradient background with blur effect
+
+**Test: Unlocking Fruits**
+- [ ] Drop a fruit (any starting fruit)
+- [ ] Verify: That fruit level becomes unlocked in the evolution row
+- [ ] Merge two identical fruits
+- [ ] Verify: The new merged fruit level becomes unlocked
+- [ ] Verify: Smooth transition effect (unblur and opacity fade)
+- [ ] Verify: Once unlocked, fruits stay unlocked
+
+**Test: Achievement Persistence**
+- [ ] Play and unlock several fruit levels
+- [ ] Refresh the page
+- [ ] Verify: Previously unlocked fruits remain unlocked
+- [ ] Verify: Locked fruits remain locked
+- [ ] Click "New Game" or "Restart"
+- [ ] Verify: Achievements persist even after restart
+
+**Test: Progressive Unlocking**
+- [ ] Start new game (clear localStorage if needed)
+- [ ] Verify: Only blueberry (level 0) is unlocked
+- [ ] Drop a blueberry
+- [ ] Verify: Blueberry remains unlocked
+- [ ] Merge to create strawberry
+- [ ] Verify: Both blueberry and strawberry are unlocked
+- [ ] Continue merging to higher levels
+- [ ] Verify: Each new fruit level unlocks progressively
+
+### 6. Responsive Design Tests
 
 **Test: Desktop**
 - [ ] Open on desktop browser
@@ -255,7 +291,7 @@ npx http-server -p 8080
 - [ ] All fruits restore at correct positions (scaled)
 - [ ] Music stops and can be restarted
 
-### 6. Edge Cases & Error Handling
+### 7. Edge Cases & Error Handling
 
 **Test: Rapid Clicking**
 - [ ] Try dropping fruits very quickly

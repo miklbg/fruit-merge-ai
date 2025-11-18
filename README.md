@@ -29,6 +29,7 @@ The game features 10 fruit levels that merge progressively, now with beautiful c
 - **Visual Effects**: Confetti animations when fruits merge, dramatic falling animation on game over
 - **Audio Feedback**: Sound effects and background music
 - **Smart Controls**: Touch and mouse support with preview positioning
+- **Fruit Evolution Display**: Visual progress bar showing all fruit types at the bottom of the game, with unachieved fruits shown blurred
 
 ## 🔊 Audio Attribution
 
