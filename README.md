@@ -14,11 +14,11 @@ A physics-based puzzle game where you drop and merge fruits to create larger fru
 
 ## 🍓 Fruit Levels
 
-The game features 10 fruit levels that merge progressively:
-- 🍒 Cherry (Level 0) → 🍓 Strawberry (Level 1) → 🍇 Grapes (Level 2)
-- 🍊 Orange (Level 3) → 🍎 Apple (Level 4) → 🍐 Pear (Level 5)
-- 🍑 Peach (Level 6) → 🍍 Pineapple (Level 7) → 🍈 Melon (Level 8)
-- 🍉 Watermelon (Level 9) - Maximum size!
+The game features 10 fruit levels that merge progressively, now with beautiful custom illustrations:
+- Blueberry (Level 0) → Strawberry (Level 1) → Grapes (Level 2)
+- Orange (Level 3) → Apple (Level 4) → Lemon (Level 5)
+- Cantaloupe (Level 6) → Pineapple (Level 7) → Coconut (Level 8)
+- Watermelon (Level 9) - Maximum size!
 
 ## ✨ Features
 
