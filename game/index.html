@@ -23,8 +23,19 @@
         
         body {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
+            gap: 0;
+        }
+
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            /* Use either max-width or max-height to constrain */
+            width: min(100vw, 100vh * 2 / 3);
         }
 
         #game-wrapper {
@@ -32,15 +43,13 @@
             flex-direction: column;
             /* --- FIX: Enforce 2:3 aspect ratio --- */
             aspect-ratio: 2 / 3;
-            /* Use either max-width or max-height to constrain, let aspect-ratio determine the other */
-            width: min(100vw, 100vh * 2 / 3);
-            height: min(100vh, 100vw * 3 / 2);
+            width: 100%;
             /* --- FIX: Bright wrapper background --- */
             background-color: #fff7ed; /* bg-orange-50 */
             overflow: hidden;
             position: relative;
             
-            border-radius: 12px;
+            border-radius: 12px 12px 0 0;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
 
@@ -150,11 +159,7 @@
         }
         
         #fruit-evolution-row {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 25;
+            width: 100%;
             background: linear-gradient(to top, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.8));
             backdrop-filter: blur(8px);
             padding: 8px;
@@ -165,6 +170,8 @@
             overflow-x: auto;
             overflow-y: hidden;
             pointer-events: none;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         
         .evolution-fruit {
@@ -193,77 +200,80 @@
 <!-- --- FIX: Bright body classes --- -->
 <body class="bg-sky-100 text-gray-800">
 
-    <div id="game-wrapper">
-        
-        <div id="loading-screen">Loading...</div>
+    <div id="game-container">
+        <div id="game-wrapper">
+            
+            <div id="loading-screen">Loading...</div>
 
-        <!-- Start/Resume Modal -->
-        <div id="start-modal" class="absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-30 flex flex-col justify-center items-center text-center p-8">
-            <h2 class="text-5xl font-bold text-orange-500 mb-8">Fruit Merge Game</h2>
-            <button id="start-resume-button" class="px-8 py-4 bg-green-500 text-white font-bold rounded-lg shadow-lg text-2xl hover:bg-green-400 transition-all">
-                Start
-            </button>
-        </div>
+            <!-- Start/Resume Modal -->
+            <div id="start-modal" class="absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-30 flex flex-col justify-center items-center text-center p-8">
+                <h2 class="text-5xl font-bold text-orange-500 mb-8">Fruit Merge Game</h2>
+                <button id="start-resume-button" class="px-8 py-4 bg-green-500 text-white font-bold rounded-lg shadow-lg text-2xl hover:bg-green-400 transition-all">
+                    Start
+                </button>
+            </div>
 
-        <!-- --- FIX: Bright header --- -->
-        <div id="game-header" class="p-4 flex justify-between items-center bg-white/50 backdrop-blur-sm">
-            <div class="flex gap-4">
-                <div>
-                    <span class="text-sm opacity-80">Score</span>
-                    <div id="score" class="text-2xl font-bold">0</div>
+            <!-- --- FIX: Bright header --- -->
+            <div id="game-header" class="p-4 flex justify-between items-center bg-white/50 backdrop-blur-sm">
+                <div class="flex gap-4">
+                    <div>
+                        <span class="text-sm opacity-80">Score</span>
+                        <div id="score" class="text-2xl font-bold">0</div>
+                    </div>
+                    <div>
+                        <span class="text-sm opacity-80">High Score</span>
+                        <div id="high-score" class="text-2xl font-bold">0</div>
+                    </div>
                 </div>
-                <div>
-                    <span class="text-sm opacity-80">High Score</span>
-                    <div id="high-score" class="text-2xl font-bold">0</div>
+                <div class="text-right">
+                    <div class="flex items-center gap-4">
+                        <div>
+                            <span class="text-sm opacity-80">Next</span>
+                            <div id="next-fruit" class="flex justify-end items-center" style="height: 48px;">
+                                <img id="next-fruit-img" src="" alt="Next fruit" style="max-height: 48px; max-width: 48px; object-fit: contain;">
+                            </div>
+                        </div>
+                        <!-- Restart Icon Button -->
+                        <button id="new-game-button" class="p-2 bg-transparent hover:bg-orange-100 rounded-lg transition-all group" title="Restart Game" aria-label="Restart Game">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-600 group-hover:text-orange-700 transition-colors">
+                                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div class="text-right">
-                <div class="flex items-center gap-4">
-                    <div>
-                        <span class="text-sm opacity-80">Next</span>
-                        <div id="next-fruit" class="flex justify-end items-center" style="height: 48px;">
-                            <img id="next-fruit-img" src="" alt="Next fruit" style="max-height: 48px; max-width: 48px; object-fit: contain;">
-                        </div>
-                    </div>
-                    <!-- Restart Icon Button -->
-                    <button id="new-game-button" class="p-2 bg-transparent hover:bg-orange-100 rounded-lg transition-all group" title="Restart Game" aria-label="Restart Game">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-600 group-hover:text-orange-700 transition-colors">
-                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                        </svg>
+            
+            <div id="preview-fruit"></div>
+            <div id="game-canvas-wrapper"></div>
+            <div id="confetti-container"></div>
+
+            <!-- --- FIX: Bright game over modal --- -->
+            <div id="game-over-modal" class="hidden absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-20 flex flex-col justify-center items-center text-center p-8">
+                <h2 class="text-5xl font-bold text-red-500 mb-4">Game Over</h2>
+                <p class="text-xl mb-2">Final Score:</p>
+                <div id="final-score" class="text-4xl font-bold mb-8">0</div>
+                <!-- --- FIX: Playful button color --- -->
+                <button id="restart-button" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-green-400 transition-all">
+                    Restart
+                </button>
+            </div>
+
+            <!-- Restart Confirmation Modal -->
+            <div id="restart-confirm-modal" class="hidden absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-40 flex flex-col justify-center items-center text-center p-8">
+                <h2 class="text-3xl font-bold text-orange-600 mb-4">Restart Game?</h2>
+                <p class="text-lg mb-8">Your current progress will be lost.</p>
+                <div class="flex gap-4">
+                    <button id="restart-confirm-yes" class="px-6 py-3 bg-red-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-red-400 transition-all">
+                        Yes, Restart
+                    </button>
+                    <button id="restart-confirm-no" class="px-6 py-3 bg-gray-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-gray-400 transition-all">
+                        Cancel
                     </button>
                 </div>
             </div>
         </div>
-        
-        <div id="preview-fruit"></div>
-        <div id="game-canvas-wrapper"></div>
-        <div id="confetti-container"></div>
+
         <div id="fruit-evolution-row"></div>
-
-        <!-- --- FIX: Bright game over modal --- -->
-        <div id="game-over-modal" class="hidden absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-20 flex flex-col justify-center items-center text-center p-8">
-            <h2 class="text-5xl font-bold text-red-500 mb-4">Game Over</h2>
-            <p class="text-xl mb-2">Final Score:</p>
-            <div id="final-score" class="text-4xl font-bold mb-8">0</div>
-            <!-- --- FIX: Playful button color --- -->
-            <button id="restart-button" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-green-400 transition-all">
-                Restart
-            </button>
-        </div>
-
-        <!-- Restart Confirmation Modal -->
-        <div id="restart-confirm-modal" class="hidden absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-40 flex flex-col justify-center items-center text-center p-8">
-            <h2 class="text-3xl font-bold text-orange-600 mb-4">Restart Game?</h2>
-            <p class="text-lg mb-8">Your current progress will be lost.</p>
-            <div class="flex gap-4">
-                <button id="restart-confirm-yes" class="px-6 py-3 bg-red-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-red-400 transition-all">
-                    Yes, Restart
-                </button>
-                <button id="restart-confirm-no" class="px-6 py-3 bg-gray-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-gray-400 transition-all">
-                    Cancel
-                </button>
-            </div>
-        </div>
     </div>
 
     <script type="module">
@@ -274,6 +284,7 @@
         window.onload = () => {
             
             // --- DOM Elements ---
+            const gameContainer = document.getElementById('game-container');
             const gameWrapper = document.getElementById('game-wrapper');
             const headerEl = document.getElementById('game-header');
             const canvasWrapper = document.getElementById('game-canvas-wrapper');
