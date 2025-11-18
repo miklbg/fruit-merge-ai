@@ -9,6 +9,11 @@
     <link rel="stylesheet" href="css/tailwind.min.css">
     <!-- Load Matter.js Physics Engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+    <!-- Load font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chewy&display=swap" rel="stylesheet">
     
     <style>
         html, body {
@@ -125,6 +130,12 @@
         #pause-modal {
             transition: opacity 0.3s ease, transform 0.3s ease;
             pointer-events: auto;
+        }
+      
+        #pause-modal h2 {
+          font-family: "Chewy", system-ui;
+          font-weight: 400;
+          font-style: normal;
         }
 
         #pause-modal.hidden {
@@ -247,11 +258,11 @@
         <div id="game-wrapper">
             
             <div id="loading-screen">Loading...</div>
-
+          
             <!-- Pause/Start Modal -->
             <div id="pause-modal" class="absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-30 flex flex-col justify-center items-center text-center p-8">
-                <img src="assets/10-watermelon.png" alt="Watermelon Logo" class="w-8 h-8 mb-4 object-contain" style="max-width: 64px; max-height: 64px;">
-                <h2 id="pause-modal-title" class="text-5xl font-bold text-orange-500 mb-4">Fruit Merge Game</h2>
+                <img src="assets/10-watermelon.png" alt="Watermelon Logo" class="w-8 h-8 mb-4 object-contain" style="max-width: 64px; max-height: 64px; margin-bottom: 2rem;">
+                <h2 id="pause-modal-title" class="text-5xl font-bold text-orange-500 mb-4" style="margin-bottom: 2rem;">Fruit Merge</h2>
                 <p id="pause-modal-description" class="text-lg text-gray-700 max-w-md mb-8 leading-relaxed">
                     Drop and merge identical fruits to create bigger ones! Match two fruits of the same type to evolve them. Keep merging to score points and reach the watermelon. Don't let fruits stack above the red line!
                 </p>
