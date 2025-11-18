@@ -286,10 +286,11 @@ npx http-server -p 8080
 **Test: Window Resize**
 - [ ] Start playing with fruits on screen
 - [ ] Resize browser window
-- [ ] Game state saves before resize
-- [ ] Game reinitializes with saved state
-- [ ] All fruits restore at correct positions (scaled)
-- [ ] Music stops and can be restarted
+- [ ] Fruits scale smoothly without disappearing
+- [ ] All fruits remain at correct relative positions (scaled)
+- [ ] Physics continues running during and after resize
+- [ ] Music continues playing without interruption
+- [ ] Game state saves after resize
 
 ### 7. Edge Cases & Error Handling
 
