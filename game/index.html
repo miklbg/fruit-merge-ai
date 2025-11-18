@@ -151,7 +151,10 @@
                         <div id="next-fruit" class="text-3xl"></div>
                     </div>
                     <!-- --- FIX: Playful button color --- -->
-                    <button id="new-game-button" class="mt-4 px-3 py-1 bg-orange-500 text-white font-bold rounded-lg shadow-lg text-sm hover:bg-orange-400 transition-all">
+                    <button id="start-resume-button" class="px-3 py-1 bg-blue-500 text-white font-bold rounded-lg shadow-lg text-sm hover:bg-blue-400 transition-all">
+                        Start
+                    </button>
+                    <button id="new-game-button" class="px-3 py-1 bg-orange-500 text-white font-bold rounded-lg shadow-lg text-sm hover:bg-orange-400 transition-all">
                         New Game
                     </button>
                 </div>
@@ -190,6 +193,7 @@
             const highScoreEl = document.getElementById('high-score');
             const nextFruitEl = document.getElementById('next-fruit');
             const newGameButton = document.getElementById('new-game-button');
+            const startResumeButton = document.getElementById('start-resume-button');
             const gameOverModal = document.getElementById('game-over-modal');
             const finalScoreEl = document.getElementById('final-score');
             const restartButton = document.getElementById('restart-button');
@@ -256,6 +260,7 @@
             let audioContext = null;
             let backgroundMusic = null;
             let isMusicPaused = false;
+            let isMusicPlaying = false; // Track if music has ever been started
 
             function initAudioContext() {
                 if (!audioContext) {
@@ -267,13 +272,53 @@
                 if (!backgroundMusic) {
                     backgroundMusic = new Audio('assets/children-music-loop-creative-fun-262427.mp3');
                     backgroundMusic.loop = true;
-                    backgroundMusic.volume = 0.3;
+                    backgroundMusic.volume = 0.4;
                     
                     // Handle audio loading errors gracefully
                     backgroundMusic.addEventListener('error', (e) => {
                         console.warn('Background music could not be loaded. Please check assets/README.md for download instructions.');
                     });
                 }
+            }
+            
+            // Update the start/resume button text based on music state
+            function updateStartResumeButton() {
+                const startResumeButton = document.getElementById('start-resume-button');
+                if (!startResumeButton) return;
+                
+                if (!isMusicPlaying) {
+                    startResumeButton.textContent = 'Start';
+                } else if (isMusicPaused) {
+                    startResumeButton.textContent = 'Resume';
+                } else {
+                    startResumeButton.textContent = 'Pause';
+                }
+            }
+            
+            // Handle start/resume button click
+            function handleStartResumeClick() {
+                if (!backgroundMusic) {
+                    initBackgroundMusic();
+                }
+                
+                if (!isMusicPlaying || isMusicPaused) {
+                    // Start or resume music
+                    isMusicPlaying = true;
+                    isMusicPaused = false;
+                    backgroundMusic.volume = 0.4;
+                    const playPromise = backgroundMusic.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => {
+                            console.warn('Could not start music:', error);
+                        });
+                    }
+                } else {
+                    // Pause music
+                    isMusicPaused = true;
+                    backgroundMusic.pause();
+                }
+                
+                updateStartResumeButton();
             }
 
             // Play a drop sound effect (short descending tone)
@@ -351,8 +396,9 @@
                             backgroundMusic.volume -= 0.05;
                         } else {
                             backgroundMusic.pause();
-                            backgroundMusic.volume = 0.3; // Reset volume for next play
+                            backgroundMusic.volume = 0.4; // Reset volume for next play
                             clearInterval(fadeOutInterval);
+                            updateStartResumeButton();
                         }
                     }, 50);
                 }
@@ -360,15 +406,16 @@
             
             // Resume background music (for focus events)
             function resumeBackgroundMusic() {
-                if (backgroundMusic && isMusicPaused && !isGameOver) {
+                if (backgroundMusic && isMusicPaused && !isGameOver && isMusicPlaying) {
                     isMusicPaused = false;
-                    backgroundMusic.volume = 0.3;
+                    backgroundMusic.volume = 0.4;
                     const playPromise = backgroundMusic.play();
                     if (playPromise !== undefined) {
                         playPromise.catch(error => {
                             console.warn('Could not resume music:', error);
                         });
                     }
+                    updateStartResumeButton();
                 }
             }
 
@@ -549,8 +596,8 @@
                 
                 addEventListeners();
                 
-                // Start background music
-                startBackgroundMusic();
+                // Initialize background music but don't autoplay
+                initBackgroundMusic();
             }
 
             // --- Fruit Creation ---
@@ -841,7 +888,8 @@
                 gameWrapper.addEventListener('pointermove', handlePointerMove, { passive: false });
                 gameWrapper.addEventListener('pointerup', handlePointerUp, { passive: false });
                 restartButton.addEventListener('click', handleRestart);
-                newGameButton.addEventListener('click', handleRestart); 
+                newGameButton.addEventListener('click', handleRestart);
+                startResumeButton.addEventListener('click', handleStartResumeClick); 
             }
             
             // --- Event Handlers (to allow removal) ---
@@ -855,13 +903,19 @@
                 // Stop background music before restart
                 stopBackgroundMusic();
                 
+                // Reset music state
+                isMusicPlaying = false;
+                isMusicPaused = false;
+                updateStartResumeButton();
+                
                 Runner.stop(runner);
                 Render.stop(render);
                 gameWrapper.removeEventListener('pointerdown', handlePointerDown);
                 gameWrapper.removeEventListener('pointermove', handlePointerMove);
                 gameWrapper.removeEventListener('pointerup', handlePointerUp);
                 restartButton.removeEventListener('click', handleRestart);
-                newGameButton.removeEventListener('click', handleRestart); 
+                newGameButton.removeEventListener('click', handleRestart);
+                startResumeButton.removeEventListener('click', handleStartResumeClick);
                 Events.off(engine);
                 Events.off(render);
                 World.clear(world, false);
@@ -927,7 +981,8 @@
                             gameWrapper.removeEventListener('pointermove', handlePointerMove);
                             gameWrapper.removeEventListener('pointerup', handlePointerUp);
                             restartButton.removeEventListener('click', handleRestart);
-                            newGameButton.removeEventListener('click', handleRestart); 
+                            newGameButton.removeEventListener('click', handleRestart);
+                            startResumeButton.removeEventListener('click', handleStartResumeClick);
                             Events.off(engine);
                             Events.off(render);
                             World.clear(world, false);
@@ -952,7 +1007,9 @@
                     if (document.hidden) {
                         // Page lost focus/visibility
                         if (backgroundMusic && !backgroundMusic.paused) {
+                            isMusicPaused = true;
                             backgroundMusic.pause();
+                            updateStartResumeButton();
                         }
                     } else {
                         // Page gained focus/visibility
@@ -963,7 +1020,9 @@
                 // Handle window focus/blur events (app switching)
                 window.addEventListener('blur', () => {
                     if (backgroundMusic && !backgroundMusic.paused) {
+                        isMusicPaused = true;
                         backgroundMusic.pause();
+                        updateStartResumeButton();
                     }
                 });
                 
@@ -972,7 +1031,6 @@
                 });
             }
         
-        startBackgroundMusic();
         }; // End of window.onload
     </script>
 </body>
