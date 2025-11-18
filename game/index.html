@@ -178,7 +178,9 @@
                 <div class="flex items-center gap-4">
                     <div>
                         <span class="text-sm opacity-80">Next</span>
-                        <div id="next-fruit" class="text-3xl"></div>
+                        <div id="next-fruit" class="flex justify-end items-center" style="height: 48px;">
+                            <img id="next-fruit-img" src="" alt="Next fruit" style="max-height: 48px; max-width: 48px; object-fit: contain;">
+                        </div>
                     </div>
                     <!-- Restart Icon Button -->
                     <button id="new-game-button" class="p-2 bg-transparent hover:bg-orange-100 rounded-lg transition-all group" title="Restart Game" aria-label="Restart Game">
@@ -240,6 +242,7 @@
             const scoreEl = document.getElementById('score');
             const highScoreEl = document.getElementById('high-score');
             const nextFruitEl = document.getElementById('next-fruit');
+            const nextFruitImgEl = document.getElementById('next-fruit-img');
             const newGameButton = document.getElementById('new-game-button');
             const gameOverModal = document.getElementById('game-over-modal');
             const finalScoreEl = document.getElementById('final-score');
@@ -268,16 +271,16 @@
 
             const FRUITS = [
                 // Use 'baseRadius' for all pixel values - all fruits are now circles
-                { level: 0, baseRadius: 22, color: '#FFB6C1', emoji: '🍒', score: 5, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 1, baseRadius: 26, color: '#FF6347', emoji: '🍓', score: 10, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 2, baseRadius: 34, color: '#FFD700', emoji: '🍇', score: 20, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 3, baseRadius: 38, color: '#FF8C00', emoji: '🍊', score: 35, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 4, baseRadius: 48, color: '#FF4500', emoji: '🍎', score: 55, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 5, baseRadius: 58, color: '#ADFF2F', emoji: '🍐', score: 80, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 6, baseRadius: 66, color: '#FFFF00', emoji: '🍑', score: 110, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 7, baseRadius: 78, color: '#F0E68C', emoji: '🍍', score: 150, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 8, baseRadius: 90, color: '#90EE90', emoji: '🍈', score: 200, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 9, baseRadius: 102, color: '#32CD32', emoji: '🍉', score: 300, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 0, baseRadius: 22, color: '#FFB6C1', emoji: '🍒', imagePath: 'assets/1-blueberry.png', score: 5, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 1, baseRadius: 26, color: '#FF6347', emoji: '🍓', imagePath: 'assets/2-strawberry.png', score: 10, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 2, baseRadius: 34, color: '#FFD700', emoji: '🍇', imagePath: 'assets/6-grapes.png', score: 20, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 3, baseRadius: 38, color: '#FF8C00', emoji: '🍊', imagePath: 'assets/5-orange.png', score: 35, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 4, baseRadius: 48, color: '#FF4500', emoji: '🍎', imagePath: 'assets/4-apple.png', score: 55, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 5, baseRadius: 58, color: '#ADFF2F', emoji: '🍐', imagePath: 'assets/3-lemon.png', score: 80, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 6, baseRadius: 66, color: '#FFFF00', emoji: '🍑', imagePath: 'assets/7-cantaloupe.png', score: 110, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 7, baseRadius: 78, color: '#F0E68C', emoji: '🍍', imagePath: 'assets/9-pineapple.png', score: 150, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 8, baseRadius: 90, color: '#90EE90', emoji: '🍈', imagePath: 'assets/8-coconut.png', score: 200, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 9, baseRadius: 102, color: '#32CD32', emoji: '🍉', imagePath: 'assets/10-watermelon.png', score: 300, clipPath: POLYGON_CLIP_PATHS['circle'] },
             ];
 
             const MAX_FRUIT_LEVEL = FRUITS.length - 1;
@@ -287,7 +290,15 @@
             const BASE_WALL_THICKNESS = 40; 
             const EMOJI_SCALE_FACTOR = 1.7;
             const HIGHSCORE_KEY = 'fruit-merge-highscore';
-            const GAME_STATE_KEY = 'fruit-merge-gamestate'; 
+            const GAME_STATE_KEY = 'fruit-merge-gamestate';
+            
+            // Preload fruit images
+            const fruitImages = {};
+            FRUITS.forEach(fruit => {
+                const img = new Image();
+                img.src = fruit.imagePath;
+                fruitImages[fruit.level] = img;
+            }); 
 
             // --- Game State ---
             let engine, render, runner, world;
@@ -583,8 +594,6 @@
                     const bodies = Composite.allBodies(world);
 
                     context.save(); 
-                    context.textAlign = 'center';
-                    context.textBaseline = 'middle';
                     
                     bodies.forEach(body => {
                         if (body.label !== 'fruit') return;
@@ -592,13 +601,16 @@
                         const fruitData = FRUITS[body.fruitLevel];
                         if (fruitData) {
                             const scaledRadius = fruitData.baseRadius * scaleFactor;
-                            const size = scaledRadius * EMOJI_SCALE_FACTOR;
-                            context.font = `${size}px Arial`;
-                            context.translate(body.position.x, body.position.y);
-                            context.rotate(body.angle);
-                            context.fillText(fruitData.emoji, 0, 0);
-                            context.rotate(-body.angle);
-                            context.translate(-body.position.x, -body.position.y);
+                            const img = fruitImages[body.fruitLevel];
+                            
+                            if (img && img.complete) {
+                                const size = scaledRadius * 2;
+                                context.save();
+                                context.translate(body.position.x, body.position.y);
+                                context.rotate(body.angle);
+                                context.drawImage(img, -scaledRadius, -scaledRadius, size, size);
+                                context.restore();
+                            }
                         }
                     });
 
@@ -639,8 +651,20 @@
                 previewFruitEl.style.height = `${scaledRadius * 2}px`;
                 previewFruitEl.style.backgroundColor = fruitData.color;
                 
-                previewFruitEl.style.fontSize = `${scaledRadius * EMOJI_SCALE_FACTOR}px`; 
-                previewFruitEl.textContent = fruitData.emoji;
+                // Use image instead of emoji
+                const img = fruitImages[currentFruitLevel];
+                if (img && img.complete) {
+                    previewFruitEl.style.backgroundImage = `url('${fruitData.imagePath}')`;
+                    previewFruitEl.style.backgroundSize = 'contain';
+                    previewFruitEl.style.backgroundPosition = 'center';
+                    previewFruitEl.style.backgroundRepeat = 'no-repeat';
+                    previewFruitEl.textContent = '';
+                } else {
+                    // Fallback to emoji if image not loaded
+                    previewFruitEl.style.backgroundImage = 'none';
+                    previewFruitEl.style.fontSize = `${scaledRadius * EMOJI_SCALE_FACTOR}px`; 
+                    previewFruitEl.textContent = fruitData.emoji;
+                }
                 
                 previewFruitEl.style.top = `${headerHeight + dropAreaY - scaledRadius}px`;
                 
@@ -653,7 +677,18 @@
 
             function spawnNextFruit() {
                 nextFruitLevel = Math.floor(Math.random() * STARTING_FRUIT_LEVELS);
-                nextFruitEl.textContent = FRUITS[nextFruitLevel].emoji;
+                const fruitData = FRUITS[nextFruitLevel];
+                
+                // Update next fruit image
+                const img = fruitImages[nextFruitLevel];
+                if (img && img.complete) {
+                    nextFruitImgEl.src = fruitData.imagePath;
+                    nextFruitImgEl.style.display = 'block';
+                } else {
+                    // Fallback to emoji if image not loaded
+                    nextFruitImgEl.style.display = 'none';
+                    nextFruitEl.textContent = fruitData.emoji;
+                }
             }
             
             // --- Game Controls (for the DIV) ---
