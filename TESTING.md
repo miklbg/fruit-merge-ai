@@ -1,111 +1,313 @@
-# Quick Test Guide
+# Testing Guide
 
-## How to Test the Implementation
+## Overview
 
-### 1. Background Music File
+This guide explains how to test the Fruit Merge Game. The game is a self-contained HTML/CSS/JavaScript application with no build process or external test framework.
 
-The background music file is already included in the repository at:
-`game/assets/children-music-loop-creative-fun-262427.mp3`
+## Quick Test
 
-### 2. Test the Game
-
-**Option A: Local File System**
+**Fastest way to verify the game works:**
 ```bash
-# Simply open the file in your browser:
-open game/index.html
+# Open the game
+open game/index.html  # macOS
 # or
-firefox game/index.html
+start game/index.html  # Windows
 # or
-chrome game/index.html
+xdg-open game/index.html  # Linux
 ```
 
-**Option B: Local Server (Recommended)**
+## Local Server Testing (Recommended)
+
+For the most reliable testing experience:
+
+**Option 1: Python**
 ```bash
 cd game
 python3 -m http.server 8080
-# Then visit: http://localhost:8080
+# Visit: http://localhost:8080
 ```
 
-### 3. Test Focus Handling
-
-Once the game is running with the music file:
-
-1. **Test Tab Switching:**
-   - Open the game
-   - Music should be playing
-   - Switch to another tab
-   - Music should pause
-   - Switch back to the game tab
-   - Music should resume
-
-2. **Test App Switching:**
-   - Open the game
-   - Music should be playing
-   - Switch to another application (Alt+Tab or Cmd+Tab)
-   - Music should pause
-   - Switch back to the browser
-   - Music should resume
-
-3. **Test Game Over:**
-   - Play until game over
-   - Music should fade out
-   - Click "Restart"
-   - Music should start playing again
-
-### 4. Test Without Music File
-
-To verify error handling works:
+**Option 2: Node.js**
 ```bash
-# Temporarily rename the music file
-mv game/assets/children-music-loop-creative-fun-262427.mp3 game/assets/children-music-loop-creative-fun-262427.mp3.bak
-
-# Open the game - it should still work
-# Check browser console for warning message
-# Sound effects should still play
-
-# Restore the file
-mv game/assets/children-music-loop-creative-fun-262427.mp3.bak game/assets/children-music-loop-creative-fun-262427.mp3
+cd game
+npx http-server -p 8080
+# Visit: http://localhost:8080
 ```
 
-### Expected Behavior
+## 🧪 Manual Test Scenarios
 
-✅ **With music file:**
-- Background music plays on game start (may require user interaction due to browser autoplay policies)
-- Music loops continuously
-- Music pauses when focus is lost (tab/app switch)
-- Music resumes when focus is gained
-- Music fades out on game over
-- Sound effects continue to work
+### 1. Basic Gameplay Tests
 
-✅ **Without music file:**
-- Game loads and works normally
-- Sound effects still play
-- Console shows warning: "Background music could not be loaded. Please check assets/README.md for download instructions."
-- No errors or crashes
+**Test: Game Loads**
+- [ ] Open `game/index.html`
+- [ ] Game wrapper appears with bright orange/sky blue theme
+- [ ] Start modal displays with "Start" button
+- [ ] No console errors appear
 
-### Browser Console Messages
+**Test: Start Game**
+- [ ] Click "Start" button
+- [ ] Modal disappears
+- [ ] Preview fruit appears at top (with dashed border)
+- [ ] Score shows "0"
+- [ ] High Score shows saved value or "0"
+- [ ] Next fruit emoji appears in header
 
-Look for these messages to verify everything is working:
+**Test: Drop Fruits**
+- [ ] Move mouse/finger to drag preview fruit horizontally
+- [ ] Preview fruit follows pointer within boundaries
+- [ ] Click/tap to drop fruit
+- [ ] Drop sound effect plays
+- [ ] Fruit falls with physics
+- [ ] New preview fruit appears after ~300ms
+- [ ] Next fruit updates
 
+**Test: Merge Fruits**
+- [ ] Drop two identical fruits next to each other
+- [ ] They collide and merge into next level fruit
+- [ ] Merge sound effect plays (ascending chime)
+- [ ] Confetti animation appears at merge point
+- [ ] Score increases
+- [ ] Device vibrates on mobile (if supported)
+
+**Test: Score System**
+- [ ] Score increases when fruits merge
+- [ ] Larger merges give more points
+- [ ] High score updates when current score exceeds it
+- [ ] High score persists in localStorage
+
+**Test: Game Over**
+- [ ] Stack fruits above red line
+- [ ] Game over triggers when fruit settles above line
+- [ ] "Game Over" modal appears
+- [ ] Final score displays correctly
+- [ ] "Restart" button appears
+- [ ] Music fades out
+
+**Test: Restart**
+- [ ] Click "Restart" button from game over modal
+- [ ] Game resets completely
+- [ ] Score resets to 0
+- [ ] High score remains unchanged
+- [ ] Music starts playing again
+- [ ] Preview fruit reappears
+
+**Test: New Game Button**
+- [ ] Click "New Game" button in header during play
+- [ ] Game resets immediately
+- [ ] Score resets to 0
+- [ ] Saved game state is cleared
+
+### 2. Audio Tests
+
+**Test: Sound Effects**
+- [ ] Drop sound plays when dropping a fruit (descending tone)
+- [ ] Merge sound plays when fruits merge (ascending chime)
+- [ ] Sounds work without background music
+- [ ] Sounds are at appropriate volume
+
+**Test: Background Music - With File**
+- [ ] Music file exists at `game/assets/children-music-loop-creative-fun-262427.mp3`
+- [ ] Music starts when clicking "Start" button
+- [ ] Music loops continuously during gameplay
+- [ ] Music volume is set to low level (0.05)
+- [ ] Music fades out on game over
+- [ ] Music restarts on game restart
+
+**Test: Background Music - Without File**
+- [ ] Temporarily rename/move music file
+- [ ] Open game
+- [ ] Check console for warning message
+- [ ] Game still loads and works
+- [ ] Sound effects still play
+- [ ] No errors or crashes
+- [ ] Restore music file after test
+
+### 3. Focus Handling Tests
+
+**Test: Tab Switching**
+1. Start the game with music playing
+2. Switch to another browser tab
+3. Verify: Music pauses
+4. Switch back to game tab
+5. Verify: Music resumes playing
+6. Button shows correct state ("Pause" when playing)
+
+**Test: App Switching**
+1. Start the game with music playing
+2. Switch to another application (Alt+Tab / Cmd+Tab)
+3. Verify: Music pauses
+4. Return to browser
+5. Verify: Music resumes playing
+
+**Test: Window Blur/Focus**
+1. Game playing with music
+2. Click outside browser window
+3. Verify: Music pauses
+4. Click back into browser
+5. Verify: Music resumes
+
+### 4. Persistence Tests
+
+**Test: Game State Saving**
+- [ ] Play for a few moves
+- [ ] Refresh the page
+- [ ] Click "Resume" (not "Start")
+- [ ] Game state restores with all fruits in same positions
+- [ ] Score is preserved
+- [ ] Next fruit is preserved
+
+**Test: High Score Persistence**
+- [ ] Play and achieve a high score
+- [ ] Close browser completely
+- [ ] Reopen game
+- [ ] High score is still displayed
+
+**Test: Clear Saved State**
+- [ ] Save a game state
+- [ ] Click "New Game" or "Restart"
+- [ ] Refresh page
+- [ ] Verify: Shows "Start" not "Resume"
+- [ ] Verify: Game starts fresh
+
+### 5. Responsive Design Tests
+
+**Test: Desktop**
+- [ ] Open on desktop browser
+- [ ] Game container maintains 2:3 aspect ratio
+- [ ] Fits within viewport
+- [ ] Mouse controls work smoothly
+- [ ] Graphics scale properly
+
+**Test: Mobile/Tablet**
+- [ ] Open on mobile device or use browser dev tools
+- [ ] Touch controls work for dragging
+- [ ] Tap to drop works
+- [ ] Game scales to screen size
+- [ ] No unwanted scrolling or zooming
+
+**Test: Window Resize**
+- [ ] Start playing with fruits on screen
+- [ ] Resize browser window
+- [ ] Game state saves before resize
+- [ ] Game reinitializes with saved state
+- [ ] All fruits restore at correct positions (scaled)
+- [ ] Music stops and can be restarted
+
+### 6. Edge Cases & Error Handling
+
+**Test: Rapid Clicking**
+- [ ] Try dropping fruits very quickly
+- [ ] Verify: Only one fruit drops at a time
+- [ ] Verify: No duplicate fruits appear
+
+**Test: Maximum Fruit**
+- [ ] Merge up to watermelon (level 9)
+- [ ] Try to merge two watermelons
+- [ ] Verify: They don't merge (max level reached)
+- [ ] Verify: No errors occur
+
+**Test: Browser Autoplay Policy**
+- [ ] Open game in browser with strict autoplay policy
+- [ ] Verify: Console shows autoplay warning (not error)
+- [ ] Click "Start"
+- [ ] Verify: Music attempts to play
+- [ ] Game works regardless of music state
+
+**Test: Missing Dependencies (CDN)**
+- [ ] Disable internet connection
+- [ ] Try to load game
+- [ ] Verify: Appropriate error handling (may not fully load)
+- [ ] Re-enable connection and reload
+- [ ] Verify: Game loads properly
+
+**Test: LocalStorage Full/Disabled**
+- [ ] Disable localStorage in browser settings
+- [ ] Play the game
+- [ ] Verify: Game works but doesn't save state
+- [ ] Verify: No crashes or errors
+
+## 🔍 Browser Console Checks
+
+During testing, monitor the browser console for:
+
+### Expected Messages (OK)
 ```
-✓ Normal operation: No errors
-✓ Music file missing: "Background music could not be loaded..."
-✓ Autoplay prevented: "Autoplay was prevented. User interaction required."
+✓ "Layout ready. Wrapper: [width]x[height], Header: [height]"
+✓ "Loading from saved state..." (when resuming)
+✓ "Starting new game..." (when starting fresh)
 ```
 
-### Troubleshooting
+### Expected Warnings (Non-Critical)
+```
+⚠ "Autoplay was prevented. User interaction required."
+⚠ "Background music could not be loaded..." (only if file missing)
+⚠ "Could not resume music: [error]"
+```
 
-**Music doesn't play:**
-- Check if file exists at `game/assets/children-music-loop-creative-fun-262427.mp3`
-- Check browser console for errors
-- Try clicking on the game (autoplay may require user interaction)
-- Check browser's autoplay settings
+### Errors (Should Investigate)
+```
+❌ Any JavaScript errors
+❌ Network errors (except if intentionally offline)
+❌ Canvas rendering errors
+```
 
-**Music doesn't pause/resume:**
-- Check browser console for errors
-- Try in a different browser (some browsers handle visibility differently)
-- Make sure you're using a modern browser (Chrome, Firefox, Safari, Edge)
+## 📊 Performance Checks
 
-**Sound effects don't play:**
-- This is a separate issue (not related to this PR)
-- Sound effects use Web Audio API, which always works
+**Test: Frame Rate**
+- [ ] Open browser dev tools (Performance tab)
+- [ ] Play for 30+ seconds with many fruits
+- [ ] Check: Maintains ~60 FPS
+- [ ] Check: No significant frame drops
+- [ ] Check: Physics calculations are smooth
+
+**Test: Memory Usage**
+- [ ] Open browser dev tools (Memory tab)
+- [ ] Play through multiple game overs
+- [ ] Check: No significant memory leaks
+- [ ] Check: Memory usage is reasonable
+
+## 🌐 Browser Compatibility Testing
+
+Test on multiple browsers:
+- [ ] Chrome (latest)
+- [ ] Firefox (latest)
+- [ ] Safari (latest)
+- [ ] Edge (latest)
+- [ ] Mobile Chrome
+- [ ] Mobile Safari
+
+For each browser, verify:
+- Game loads correctly
+- Physics works smoothly
+- Audio plays (or gracefully fails)
+- Controls are responsive
+- Visual effects render properly
+
+## ✅ Pre-Release Checklist
+
+Before considering the game "ready":
+- [ ] All basic gameplay tests pass
+- [ ] Audio works correctly (or fails gracefully)
+- [ ] Game state persistence works
+- [ ] Responsive on desktop and mobile
+- [ ] No console errors during normal gameplay
+- [ ] High scores save and persist
+- [ ] Browser compatibility verified
+- [ ] Performance is acceptable
+
+## 🐛 Known Limitations
+
+- No automated test suite (pure HTML/CSS/JS game)
+- Browser autoplay policies may prevent music without user interaction
+- LocalStorage limits (~5-10MB) could affect saved states with many games
+- Physics simulation may vary slightly across different devices/browsers
+
+## 📝 Reporting Issues
+
+When reporting bugs, include:
+1. Browser and version
+2. Operating system
+3. Steps to reproduce
+4. Expected vs actual behavior
+5. Console errors (if any)
+6. Screenshots/video if relevant
