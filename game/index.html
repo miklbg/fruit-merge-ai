@@ -277,7 +277,7 @@
                 if (!backgroundMusic) {
                     backgroundMusic = new Audio('assets/children-music-loop-creative-fun-262427.mp3');
                     backgroundMusic.loop = true;
-                    backgroundMusic.volume = 0.1;
+                    backgroundMusic.volume = 0.05;
                     
                     // Handle audio loading errors gracefully
                     backgroundMusic.addEventListener('error', (e) => {
@@ -357,11 +357,11 @@
                     
                     // Fade out effect
                     const fadeOutInterval = setInterval(() => {
-                        if (backgroundMusic.volume > 0.05) {
-                            backgroundMusic.volume -= 0.05;
+                        if (backgroundMusic.volume > 0.01) {
+                            backgroundMusic.volume -= 0.01;
                         } else {
                             backgroundMusic.pause();
-                            backgroundMusic.volume = 0.1; // Reset volume for next play
+                            backgroundMusic.volume = 0.05; // Reset volume for next play
                             clearInterval(fadeOutInterval);
                         }
                     }, 50);
@@ -372,7 +372,7 @@
             function resumeBackgroundMusic() {
                 if (backgroundMusic && isMusicPaused && !isGameOver) {
                     isMusicPaused = false;
-                    backgroundMusic.volume = 0.1;
+                    backgroundMusic.volume = 0.05;
                     const playPromise = backgroundMusic.play();
                     if (playPromise !== undefined) {
                         playPromise.catch(error => {
@@ -1008,7 +1008,7 @@
                     if (!backgroundMusic) {
                         // First click - initialize and start music
                         initBackgroundMusic();
-                        backgroundMusic.volume = backgroundMusic.volume || 0.1;
+                        backgroundMusic.volume = backgroundMusic.volume || 0.05;
                         startBackgroundMusic();
                         startModal.classList.add('hidden');
                         isMusicPaused = false;
