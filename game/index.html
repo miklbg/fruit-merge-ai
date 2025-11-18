@@ -60,8 +60,7 @@
             pointer-events: none;
             opacity: 0.8;
             border: 2px dashed rgba(0, 0, 0, 0.3); /* Darker dash for light bg */
-            
-            border-radius: 0;
+            border-radius: 50%; /* Match circular fruit shape */
             
             display: flex;
             justify-content: center;
@@ -664,8 +663,8 @@
                 const img = fruitImages[currentFruitLevel];
                 if (img && img.complete) {
                     previewFruitEl.style.backgroundImage = `url('${fruitData.imagePath}')`;
-                    // Scale up the background image to fill more of the circle (120%)
-                    previewFruitEl.style.backgroundSize = '120%';
+                    // Scale up the background image to match dropped fruit size (150% of diameter = 3x radius)
+                    previewFruitEl.style.backgroundSize = '150%';
                     previewFruitEl.style.backgroundPosition = 'center';
                     previewFruitEl.style.backgroundRepeat = 'no-repeat';
                     previewFruitEl.textContent = '';
