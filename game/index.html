@@ -90,6 +90,28 @@
             image-rendering: -webkit-optimize-contrast;
         }
 
+        #cooldown-indicator {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 11;
+            pointer-events: none;
+            width: 80px;
+            height: 6px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        #cooldown-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+            border-radius: 3px;
+            transition: width 0.05s linear;
+        }
+
         #game-canvas-wrapper {
             position: absolute;
             left: 0;
@@ -289,6 +311,9 @@
             </div>
             
             <div id="preview-fruit"></div>
+            <div id="cooldown-indicator">
+                <div id="cooldown-progress"></div>
+            </div>
             <div id="game-canvas-wrapper"></div>
             <div id="confetti-container"></div>
 
@@ -337,6 +362,8 @@
             const canvasWrapper = document.getElementById('game-canvas-wrapper');
             const loadingScreen = document.getElementById('loading-screen');
             const previewFruitEl = document.getElementById('preview-fruit');
+            const cooldownIndicator = document.getElementById('cooldown-indicator');
+            const cooldownProgress = document.getElementById('cooldown-progress');
             const confettiContainer = document.getElementById('confetti-container');
             const startModal = document.getElementById('start-modal');
             const startResumeButton = document.getElementById('start-resume-button');
@@ -393,7 +420,7 @@
             const GAME_OVER_LINE_Y_PERCENT = 0.18; 
             const DROP_AREA_Y_PERCENT = 0.1; 
             const BASE_WALL_THICKNESS = 40; 
-            const DROP_COOLDOWN_MS = 500; // Cooldown period between fruit drops
+            const DROP_COOLDOWN_MS = 400; // Cooldown period between fruit drops
             const HIGHSCORE_KEY = 'fruit-merge-highscore';
             const GAME_STATE_KEY = 'fruit-merge-gamestate';
             const ACHIEVEMENTS_KEY = 'fruit-merge-achievements';
@@ -415,6 +442,7 @@
             let isGameOver = false;
             let isDropping = false; 
             let lastDropTime = 0; // Track the time of the last fruit drop
+            let cooldownInterval = null; // Track the cooldown update interval
             let collisionTimeout = null;
             let currentPreviewX = 0; 
             let saveCounter = 0; 
@@ -725,6 +753,7 @@
                 isGameOver = false;
                 isDropping = false;
                 lastDropTime = 0; // Reset drop time on new game
+                cooldownInterval = null; // Reset cooldown interval
                 saveCounter = 0;
                 currentGameMaxFruit = -1; // Reset current game max on new game
                 
@@ -951,6 +980,16 @@
                 previewFruitEl.style.clipPath = clipPath;
                 previewFruitEl.style.borderRadius = clipPath === POLYGON_CLIP_PATHS['circle'] ? '50%' : '0';
 
+                // Position the cooldown indicator
+                const indicatorTop = headerHeight + dropAreaY + scaledRadius + 10;
+                cooldownIndicator.style.top = `${indicatorTop}px`;
+                
+                // Show indicator at full if not in cooldown
+                const currentTime = Date.now();
+                if (currentTime - lastDropTime >= DROP_COOLDOWN_MS) {
+                    cooldownProgress.style.width = '100%';
+                }
+
                 moveFruit(currentPreviewX, true); 
             }
 
@@ -1017,6 +1056,9 @@
                 isDropping = true;
                 lastDropTime = currentTime; // Record the drop time
                 
+                // Start the cooldown indicator
+                startCooldownIndicator();
+                
                 const droppedFruit = createFruitBody(
                     currentPreviewX, 
                     dropAreaY,
@@ -1056,6 +1098,48 @@
                         isDropping = false;
                     }
                 }, 300);
+            }
+
+            // --- Cooldown Indicator Functions ---
+            function startCooldownIndicator() {
+                // Clear any existing interval
+                if (cooldownInterval) {
+                    clearInterval(cooldownInterval);
+                }
+                
+                // Position the indicator below the preview fruit
+                const fruitData = FRUITS[currentFruitLevel];
+                const scaledRadius = fruitData.baseRadius * scaleFactor;
+                const indicatorTop = headerHeight + dropAreaY + scaledRadius + 10;
+                cooldownIndicator.style.top = `${indicatorTop}px`;
+                cooldownIndicator.style.display = 'block';
+                
+                // Reset progress to 0
+                cooldownProgress.style.width = '0%';
+                
+                const startTime = Date.now();
+                const updateInterval = 50; // Update every 50ms for smooth animation
+                
+                cooldownInterval = setInterval(() => {
+                    const elapsed = Date.now() - lastDropTime;
+                    const progress = Math.min((elapsed / DROP_COOLDOWN_MS) * 100, 100);
+                    cooldownProgress.style.width = `${progress}%`;
+                    
+                    if (progress >= 100) {
+                        clearInterval(cooldownInterval);
+                        cooldownInterval = null;
+                        // Optionally hide the indicator when ready
+                        // cooldownIndicator.style.display = 'none';
+                    }
+                }, updateInterval);
+            }
+            
+            function stopCooldownIndicator() {
+                if (cooldownInterval) {
+                    clearInterval(cooldownInterval);
+                    cooldownInterval = null;
+                }
+                cooldownProgress.style.width = '100%';
             }
 
             // --- Confetti Effect ---
@@ -1300,6 +1384,12 @@
             function handleRestart() {
                 localStorage.removeItem(GAME_STATE_KEY);
                 
+                // Clear cooldown interval
+                if (cooldownInterval) {
+                    clearInterval(cooldownInterval);
+                    cooldownInterval = null;
+                }
+                
                 // Reset game over modal visibility states
                 gameOverModal.classList.add('hidden');
                 gameOverText.classList.remove('visible');
@@ -1396,6 +1486,12 @@
                             
                             if (!isGameOver && world && Composite.allBodies(world).length > 0) {
                                 saveGameState();
+                            }
+                            
+                            // Clear cooldown interval
+                            if (cooldownInterval) {
+                                clearInterval(cooldownInterval);
+                                cooldownInterval = null;
                             }
                             
                             // Stop background music before reinitializing
