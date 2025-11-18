@@ -132,6 +132,14 @@
         
         <div id="loading-screen">Loading...</div>
 
+        <!-- Start/Resume Modal -->
+        <div id="start-modal" class="absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-30 flex flex-col justify-center items-center text-center p-8">
+            <h2 class="text-5xl font-bold text-orange-500 mb-8">Fruit Merge Game</h2>
+            <button id="start-resume-button" class="px-8 py-4 bg-green-500 text-white font-bold rounded-lg shadow-lg text-2xl hover:bg-green-400 transition-all">
+                Start
+            </button>
+        </div>
+
         <!-- --- FIX: Bright header --- -->
         <div id="game-header" class="p-4 flex justify-between items-center bg-white/50 backdrop-blur-sm">
             <div class="flex gap-4">
@@ -151,7 +159,7 @@
                         <div id="next-fruit" class="text-3xl"></div>
                     </div>
                     <!-- --- FIX: Playful button color --- -->
-                    <button id="new-game-button" class="mt-4 px-3 py-1 bg-orange-500 text-white font-bold rounded-lg shadow-lg text-sm hover:bg-orange-400 transition-all">
+                    <button id="new-game-button" class="px-3 py-1 bg-orange-500 text-white font-bold rounded-lg shadow-lg text-sm hover:bg-orange-400 transition-all">
                         New Game
                     </button>
                 </div>
@@ -185,6 +193,8 @@
             const loadingScreen = document.getElementById('loading-screen');
             const previewFruitEl = document.getElementById('preview-fruit');
             const confettiContainer = document.getElementById('confetti-container');
+            const startModal = document.getElementById('start-modal');
+            const startResumeButton = document.getElementById('start-resume-button');
             
             const scoreEl = document.getElementById('score');
             const highScoreEl = document.getElementById('high-score');
@@ -267,7 +277,7 @@
                 if (!backgroundMusic) {
                     backgroundMusic = new Audio('assets/children-music-loop-creative-fun-262427.mp3');
                     backgroundMusic.loop = true;
-                    backgroundMusic.volume = 0.3;
+                    backgroundMusic.volume = 0.4;
                     
                     // Handle audio loading errors gracefully
                     backgroundMusic.addEventListener('error', (e) => {
@@ -351,7 +361,7 @@
                             backgroundMusic.volume -= 0.05;
                         } else {
                             backgroundMusic.pause();
-                            backgroundMusic.volume = 0.3; // Reset volume for next play
+                            backgroundMusic.volume = 0.4; // Reset volume for next play
                             clearInterval(fadeOutInterval);
                         }
                     }, 50);
@@ -362,7 +372,7 @@
             function resumeBackgroundMusic() {
                 if (backgroundMusic && isMusicPaused && !isGameOver) {
                     isMusicPaused = false;
-                    backgroundMusic.volume = 0.3;
+                    backgroundMusic.volume = 0.4;
                     const playPromise = backgroundMusic.play();
                     if (playPromise !== undefined) {
                         playPromise.catch(error => {
@@ -394,6 +404,7 @@
                     initGame(); 
                     setupResizeObserver();
                     setupVisibilityHandlers();
+                    setupStartModal();
                 } else {
                     console.log("Waiting for layout dimensions...");
                 }
@@ -548,9 +559,6 @@
                 });
                 
                 addEventListeners();
-                
-                // Start background music
-                startBackgroundMusic();
             }
 
             // --- Fruit Creation ---
@@ -953,10 +961,17 @@
                         // Page lost focus/visibility
                         if (backgroundMusic && !backgroundMusic.paused) {
                             backgroundMusic.pause();
+                            isMusicPaused = true;
+                            if (startResumeButton && !startModal.classList.contains('hidden')) {
+                                startResumeButton.textContent = 'Resume';
+                            }
                         }
                     } else {
                         // Page gained focus/visibility
                         resumeBackgroundMusic();
+                        if (backgroundMusic && !backgroundMusic.paused && startResumeButton && !startModal.classList.contains('hidden')) {
+                            startResumeButton.textContent = 'Pause';
+                        }
                     }
                 });
                 
@@ -964,15 +979,51 @@
                 window.addEventListener('blur', () => {
                     if (backgroundMusic && !backgroundMusic.paused) {
                         backgroundMusic.pause();
+                        isMusicPaused = true;
+                        if (startResumeButton && !startModal.classList.contains('hidden')) {
+                            startResumeButton.textContent = 'Resume';
+                        }
                     }
                 });
                 
                 window.addEventListener('focus', () => {
                     resumeBackgroundMusic();
+                    if (backgroundMusic && !backgroundMusic.paused && startResumeButton && !startModal.classList.contains('hidden')) {
+                        startResumeButton.textContent = 'Pause';
+                    }
+                });
+            }
+            
+            // --- Setup Start/Resume Modal ---
+            function setupStartModal() {
+                // Set initial button text based on saved game
+                if (localStorage.getItem(GAME_STATE_KEY)) {
+                    startResumeButton.textContent = 'Resume';
+                } else {
+                    startResumeButton.textContent = 'Start';
+                }
+                
+                // Modal is visible by default, add click handler
+                startResumeButton.addEventListener('click', () => {
+                    if (!backgroundMusic) {
+                        // First click - initialize and start music
+                        initBackgroundMusic();
+                        backgroundMusic.volume = backgroundMusic.volume || 0.4;
+                        startBackgroundMusic();
+                        startModal.classList.add('hidden');
+                        isMusicPaused = false;
+                    } else if (backgroundMusic.paused) {
+                        // Music is paused - resume it
+                        resumeBackgroundMusic();
+                        startResumeButton.textContent = 'Pause';
+                    } else {
+                        // Music is playing - pause it
+                        stopBackgroundMusic();
+                        startResumeButton.textContent = 'Resume';
+                    }
                 });
             }
         
-        startBackgroundMusic();
         }; // End of window.onload
     </script>
 </body>
