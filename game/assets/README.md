@@ -1,6 +1,6 @@
-# Audio Assets
+# Game Assets
 
-This directory contains the audio assets for the Fruit Merge Game.
+This directory contains the graphic and audio assets for the Fruit Merge Game.
 
 ## Background Music
 
@@ -32,3 +32,11 @@ Sound effects (drop and merge sounds) are **not** stored as files. They are gene
 - Ascending chord progression (C5-E5-G5 with octave doubling)
 - Duration: 300ms
 - Plays when two fruits successfully merge
+
+## Fruit Illustrations
+
+The fruit illustrations were generated with Gemini using the exact prompt below.
+
+```text
+A whimsical, charming, clean, and simple cartoon game icon of an [FRUIT NAME]. The fruit is a single, compact, softly spherical, whole, uncut object, ideal for a physics dropping game. It distinctly resembles a realistic fruit in its natural shape and form, rendered with vibrant, highly saturated, yet natural-looking colors (no unnatural hues), and a soft, playful light reflection to clearly show its roundness, without any white overlay or desaturation effect. It features a thin, clean, slightly imperfect dark stroke that IS the fruit's outermost boundary, with NO additional outer ring or white space. Minimal, essential internal detail, only enough to easily identify the fruit. Any natural elements like stems or leaves are tiny, simple, and seamlessly integrated/tucked extremely close to the fruit's body, ensuring the overall soft, round silhouette is maintained. The background is pure white.
+```
