@@ -895,6 +895,12 @@
                 gameWrapper.addEventListener('pointerdown', handlePointerDown, { passive: false });
                 gameWrapper.addEventListener('pointermove', handlePointerMove, { passive: false });
                 gameWrapper.addEventListener('pointerup', handlePointerUp, { passive: false });
+                
+                // Prevent toolbar events from bubbling to game
+                headerEl.addEventListener('pointerdown', stopToolbarEventBubbling, { passive: false });
+                headerEl.addEventListener('pointermove', stopToolbarEventBubbling, { passive: false });
+                headerEl.addEventListener('pointerup', stopToolbarEventBubbling, { passive: false });
+                
                 restartButton.addEventListener('click', handleRestart);
                 newGameButton.addEventListener('click', showRestartConfirmation);
                 restartConfirmYes.addEventListener('click', confirmRestart);
@@ -925,6 +931,11 @@
                 dropFruit(); 
             }
             
+            // --- Prevent toolbar pointer events from bubbling ---
+            function stopToolbarEventBubbling(e) {
+                e.stopPropagation();
+            }
+            
             function showRestartConfirmation() {
                 if (!isGameOver) {
                     restartConfirmModal.classList.remove('hidden');
@@ -951,6 +962,9 @@
                 gameWrapper.removeEventListener('pointerdown', handlePointerDown);
                 gameWrapper.removeEventListener('pointermove', handlePointerMove);
                 gameWrapper.removeEventListener('pointerup', handlePointerUp);
+                headerEl.removeEventListener('pointerdown', stopToolbarEventBubbling);
+                headerEl.removeEventListener('pointermove', stopToolbarEventBubbling);
+                headerEl.removeEventListener('pointerup', stopToolbarEventBubbling);
                 restartButton.removeEventListener('click', handleRestart);
                 newGameButton.removeEventListener('click', showRestartConfirmation);
                 restartConfirmYes.removeEventListener('click', confirmRestart);
@@ -1019,6 +1033,9 @@
                             gameWrapper.removeEventListener('pointerdown', handlePointerDown);
                             gameWrapper.removeEventListener('pointermove', handlePointerMove);
                             gameWrapper.removeEventListener('pointerup', handlePointerUp);
+                            headerEl.removeEventListener('pointerdown', stopToolbarEventBubbling);
+                            headerEl.removeEventListener('pointermove', stopToolbarEventBubbling);
+                            headerEl.removeEventListener('pointerup', stopToolbarEventBubbling);
                             restartButton.removeEventListener('click', handleRestart);
                             newGameButton.removeEventListener('click', showRestartConfirmation);
                             restartConfirmYes.removeEventListener('click', confirmRestart);
