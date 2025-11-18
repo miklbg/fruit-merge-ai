@@ -26,7 +26,7 @@ The game features 10 fruit levels that merge progressively, now with beautiful c
 - **Responsive Design**: Works on desktop and mobile devices
 - **Score Tracking**: Keep track of your high score with localStorage
 - **Game State Persistence**: Resume your game where you left off
-- **Visual Effects**: Confetti animations when fruits merge
+- **Visual Effects**: Confetti animations when fruits merge, dramatic falling animation on game over
 - **Audio Feedback**: Sound effects and background music
 - **Smart Controls**: Touch and mouse support with preview positioning
 
@@ -45,6 +45,7 @@ Background music is sourced from Pixabay:
 ### Audio Features
 - **Drop Sound**: A descending tone played when fruits are released
 - **Merge Sound**: A cheerful ascending chime played when fruits merge
+- **Game Over Sound**: A descending sawtooth wave that plays when the game ends
 - **Background Music**: A continuous looping melody during gameplay that fades out when the game is paused or ended
   - **Volume Control**: Uses Web Audio API GainNode for reliable, cross-browser volume control (default ~0.25 linear, approximately -12dB)
   - **iOS Safari Support**: Automatically unlocks AudioContext on first user gesture to satisfy iOS Safari autoplay restrictions

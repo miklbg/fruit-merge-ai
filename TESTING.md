@@ -78,7 +78,11 @@ npx http-server -p 8080
 **Test: Game Over**
 - [ ] Stack fruits above red line
 - [ ] Game over triggers when fruit settles above line
-- [ ] "Game Over" modal appears
+- [ ] Game over sound effect plays (descending tone)
+- [ ] Bottom wall disappears
+- [ ] All fruits fall through the bottom and disappear
+- [ ] "Game Over" modal appears after ~2 second delay
+- [ ] Modal fades in smoothly (opacity and scale animation)
 - [ ] Final score displays correctly
 - [ ] "Restart" button appears
 - [ ] Music fades out
@@ -90,6 +94,7 @@ npx http-server -p 8080
 - [ ] High score remains unchanged
 - [ ] Music starts playing again
 - [ ] Preview fruit reappears
+- [ ] Bottom wall is restored
 
 **Test: New Game Button**
 - [ ] Click "New Game" button in header during play
@@ -102,6 +107,7 @@ npx http-server -p 8080
 **Test: Sound Effects**
 - [ ] Drop sound plays when dropping a fruit (descending tone)
 - [ ] Merge sound plays when fruits merge (ascending chime)
+- [ ] Game over sound plays when game ends (descending sawtooth tone)
 - [ ] Sounds work without background music
 - [ ] Sounds are at appropriate volume
 
@@ -146,7 +152,63 @@ npx http-server -p 8080
 4. Click back into browser
 5. Verify: Music resumes
 
-### 4. Persistence Tests
+### 4. Game Over Animation Tests
+
+**Test: Game Over Sound and Animation Sequence**
+1. Play the game and stack fruits above the red line
+2. Wait for game over to trigger
+3. Observe the complete sequence
+**Expected Results:**
+- [ ] Game over sound effect plays immediately (descending sawtooth tone, ~0.5s)
+- [ ] Background music starts fading out
+- [ ] Bottom wall disappears
+- [ ] All fruits begin falling downward
+- [ ] Fruits fall through where the bottom wall was
+- [ ] Physics continues for ~2 seconds
+- [ ] Game over modal appears after the delay
+- [ ] Modal fades in smoothly (opacity 0→1, scale 0.9→1.0, over 0.3s)
+- [ ] Final score is displayed correctly in the modal
+
+**Test: Game Over Modal Fade-In**
+1. Trigger game over
+2. Watch the modal appearance carefully
+**Expected Results:**
+- [ ] Modal does NOT appear immediately
+- [ ] Modal appears approximately 2 seconds after trigger
+- [ ] Modal opacity increases smoothly from 0 to 1
+- [ ] Modal scales smoothly from 0.9 to 1.0
+- [ ] Fade-in animation completes in ~0.3 seconds
+- [ ] Modal content (title, score, button) is visible after fade-in
+
+**Test: Fruits Fall Animation**
+1. Drop several fruits to create a stack
+2. Trigger game over
+3. Observe the falling animation
+**Expected Results:**
+- [ ] All fruits on screen start falling immediately
+- [ ] Fruits fall with realistic physics (gravity)
+- [ ] Fruits disappear below the visible area
+- [ ] No fruits remain on screen after ~2 seconds
+- [ ] No errors occur during the falling animation
+
+**Test: Game Over with Few Fruits**
+1. Trigger game over with only 1-2 fruits on screen
+2. Observe the behavior
+**Expected Results:**
+- [ ] Sound and animation sequence works correctly
+- [ ] Modal appears after delay even with few/no fruits
+- [ ] No errors in console
+
+**Test: Game Over Restart**
+1. Complete a game over sequence
+2. Click "Restart" button
+3. Play again and trigger another game over
+**Expected Results:**
+- [ ] Bottom wall is restored after restart
+- [ ] Second game over sequence works identically to first
+- [ ] All animations and sounds work on repeated game overs
+
+### 5. Persistence Tests
 
 **Test: Game State Saving**
 - [ ] Play for a few moves

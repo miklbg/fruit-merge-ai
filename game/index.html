@@ -399,6 +399,26 @@
                 oscillator2.stop(audioContext.currentTime + 0.3);
             }
 
+            // Play a game over sound effect (descending failure tone)
+            function playGameOverSound() {
+                initAudioContext();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.5);
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            }
+
             // Start background music
             function startBackgroundMusic() {
                 initBackgroundMusic();
@@ -1039,16 +1059,30 @@
             function triggerGameOver() {
                 if (isGameOver) return; 
                 isGameOver = true;
-                Runner.stop(runner);
-                finalScoreEl.textContent = score;
-
+                
+                // Play game over sound effect
+                playGameOverSound();
+                
                 // Fade out background music
                 stopBackgroundMusic();
 
-                localStorage.setItem(HIGHSCORE_KEY, highScore.toString());
-                localStorage.removeItem(GAME_STATE_KEY);
+                // Remove the bottom wall to let fruits fall
+                const groundWall = Composite.allBodies(world).find(body => body.label === 'ground');
+                if (groundWall) {
+                    World.remove(world, groundWall);
+                }
+                
+                // Let the fruits fall for 2 seconds before showing game over modal
+                setTimeout(() => {
+                    Runner.stop(runner);
+                    finalScoreEl.textContent = score;
 
-                gameOverModal.classList.remove('hidden');
+                    localStorage.setItem(HIGHSCORE_KEY, highScore.toString());
+                    localStorage.removeItem(GAME_STATE_KEY);
+
+                    // Show game over modal (it will fade in due to CSS transition)
+                    gameOverModal.classList.remove('hidden');
+                }, 2000);
             }
 
             // --- Handle Window Resize ---
