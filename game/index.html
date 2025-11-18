@@ -122,12 +122,12 @@
             font-weight: 500;
         }
 
-        #start-modal {
+        #pause-modal {
             transition: opacity 0.3s ease, transform 0.3s ease;
             pointer-events: auto;
         }
 
-        #start-modal.hidden {
+        #pause-modal.hidden {
             opacity: 0;
             transform: scale(0.9);
             pointer-events: none;
@@ -248,21 +248,44 @@
             
             <div id="loading-screen">Loading...</div>
 
-            <!-- Start/Resume Modal -->
-            <div id="start-modal" class="absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-30 flex flex-col justify-center items-center text-center p-8">
+            <!-- Pause/Start Modal -->
+            <div id="pause-modal" class="absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-30 flex flex-col justify-center items-center text-center p-8">
                 <img src="assets/10-watermelon.png" alt="Watermelon Logo" class="w-8 h-8 mb-4 object-contain" style="max-width: 64px; max-height: 64px;">
-                <h2 class="text-5xl font-bold text-orange-500 mb-4">Fruit Merge Game</h2>
-                <p class="text-lg text-gray-700 max-w-md mb-8 leading-relaxed">
+                <h2 id="pause-modal-title" class="text-5xl font-bold text-orange-500 mb-4">Fruit Merge Game</h2>
+                <p id="pause-modal-description" class="text-lg text-gray-700 max-w-md mb-8 leading-relaxed">
                     Drop and merge identical fruits to create bigger ones! Match two fruits of the same type to evolve them. Keep merging to score points and reach the watermelon. Don't let fruits stack above the red line!
                 </p>
-                <button id="start-resume-button" class="px-8 py-4 bg-green-500 text-white font-bold rounded-lg shadow-lg text-2xl hover:bg-green-400 transition-all">
-                    Start
-                </button>
+                <div class="flex flex-col gap-3 w-full max-w-xs">
+                    <button id="resume-button" class="px-8 py-4 bg-green-500 text-white font-bold rounded-lg shadow-lg text-2xl hover:bg-green-400 transition-all">
+                        Start
+                    </button>
+                    <button id="restart-menu-button" class="hidden px-6 py-3 bg-orange-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-orange-400 transition-all">
+                        Restart
+                    </button>
+                    <div class="flex gap-3">
+                        <button id="music-toggle" class="flex-1 px-4 py-3 bg-blue-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-blue-400 transition-all flex items-center justify-center gap-2">
+                            <span>Music:</span>
+                            <span id="music-status">On</span>
+                        </button>
+                        <button id="sounds-toggle" class="flex-1 px-4 py-3 bg-blue-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-blue-400 transition-all flex items-center justify-center gap-2">
+                            <span>Sounds:</span>
+                            <span id="sounds-status">On</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- --- FIX: Bright header --- -->
             <div id="game-header" class="p-4 flex justify-between items-center bg-white/50 backdrop-blur-sm">
-                <div class="flex gap-4">
+                <div class="flex gap-4 items-center">
+                    <!-- Burger Menu Icon -->
+                    <button id="burger-menu-button" class="p-2 bg-transparent hover:bg-orange-100 rounded-lg transition-all group" title="Menu" aria-label="Menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-600 group-hover:text-orange-700 transition-colors">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
                     <div>
                         <span class="text-sm opacity-80">Score</span>
                         <div id="score" class="text-2xl font-bold">0</div>
@@ -280,12 +303,6 @@
                                 <img id="next-fruit-img" src="" alt="Next fruit" style="max-height: 36px; max-width: 36px; object-fit: contain;">
                             </div>
                         </div>
-                        <!-- Restart Icon Button -->
-                        <button id="new-game-button" class="p-2 bg-transparent hover:bg-orange-100 rounded-lg transition-all group" title="Restart Game" aria-label="Restart Game">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-600 group-hover:text-orange-700 transition-colors">
-                                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                            </svg>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -340,14 +357,19 @@
             const loadingScreen = document.getElementById('loading-screen');
             const previewFruitEl = document.getElementById('preview-fruit');
             const confettiContainer = document.getElementById('confetti-container');
-            const startModal = document.getElementById('start-modal');
-            const startResumeButton = document.getElementById('start-resume-button');
+            const pauseModal = document.getElementById('pause-modal');
+            const resumeButton = document.getElementById('resume-button');
+            const burgerMenuButton = document.getElementById('burger-menu-button');
+            const restartMenuButton = document.getElementById('restart-menu-button');
+            const musicToggle = document.getElementById('music-toggle');
+            const musicStatus = document.getElementById('music-status');
+            const soundsToggle = document.getElementById('sounds-toggle');
+            const soundsStatus = document.getElementById('sounds-status');
             
             const scoreEl = document.getElementById('score');
             const highScoreEl = document.getElementById('high-score');
             const nextFruitEl = document.getElementById('next-fruit');
             const nextFruitImgEl = document.getElementById('next-fruit-img');
-            const newGameButton = document.getElementById('new-game-button');
             const gameOverModal = document.getElementById('game-over-modal');
             const gameOverText = document.getElementById('game-over-text');
             const gameOverContent = document.getElementById('game-over-content');
@@ -432,7 +454,9 @@
             // Using Web Audio API wrapper for reliable cross-browser volume control
             let audioContext = null;
             let bgmController = null;
-            let isMusicPaused = false;
+            let isMusicEnabled = true; // User preference for music
+            let areSoundsEnabled = true; // User preference for sound effects
+            let isMusicPaused = false; // Current music playback state
 
             function initAudioContext() {
                 if (!audioContext) {
@@ -462,6 +486,7 @@
 
             // Play a drop sound effect (short descending tone)
             function playDropSound() {
+                if (!areSoundsEnabled) return; // Check if sounds are enabled
                 initAudioContext();
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
@@ -482,6 +507,7 @@
 
             // Play a merge sound effect (cheerful ascending chime)
             function playMergeSound() {
+                if (!areSoundsEnabled) return; // Check if sounds are enabled
                 initAudioContext();
                 const oscillator1 = audioContext.createOscillator();
                 const oscillator2 = audioContext.createOscillator();
@@ -513,6 +539,7 @@
 
             // Play a game over sound effect (descending failure tone)
             function playGameOverSound() {
+                if (!areSoundsEnabled) return; // Check if sounds are enabled
                 initAudioContext();
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
@@ -533,6 +560,7 @@
 
             // Start background music
             function startBackgroundMusic() {
+                if (!isMusicEnabled) return; // Check if music is enabled
                 initBackgroundMusic();
                 if (bgmController && !isMusicPaused) {
                     bgmController.play().catch(error => {
@@ -697,7 +725,7 @@
                     initGame(); 
                     setupResizeObserver();
                     setupVisibilityHandlers();
-                    setupStartModal();
+                    setupPauseModal();
                 } else {
                     console.log("Waiting for layout dimensions...");
                 }
@@ -1253,14 +1281,18 @@
                 headerEl.addEventListener('pointerup', stopToolbarEventBubbling, { passive: false });
                 
                 restartButton.addEventListener('click', handleRestart);
-                newGameButton.addEventListener('click', showRestartConfirmation);
+                restartMenuButton.addEventListener('click', handleRestartFromMenu);
                 restartConfirmYes.addEventListener('click', confirmRestart);
                 restartConfirmNo.addEventListener('click', cancelRestart);
+                burgerMenuButton.addEventListener('click', togglePauseMenu);
+                resumeButton.addEventListener('click', togglePauseMenu);
+                musicToggle.addEventListener('click', toggleMusic);
+                soundsToggle.addEventListener('click', toggleSounds);
             }
             
             // --- Helper to check if any modal is visible ---
             function isModalVisible() {
-                return !startModal.classList.contains('hidden') || 
+                return !pauseModal.classList.contains('hidden') || 
                        !gameOverModal.classList.contains('hidden') || 
                        !restartConfirmModal.classList.contains('hidden');
             }
@@ -1285,6 +1317,74 @@
             // --- Prevent toolbar pointer events from bubbling ---
             function stopToolbarEventBubbling(e) {
                 e.stopPropagation();
+            }
+            
+            // --- Toggle Pause Menu ---
+            function togglePauseMenu() {
+                const isHidden = pauseModal.classList.contains('hidden');
+                
+                if (isHidden) {
+                    // Show pause menu
+                    pauseModal.classList.remove('hidden');
+                    // Update button text
+                    if (localStorage.getItem(GAME_STATE_KEY) && !isGameOver) {
+                        resumeButton.textContent = 'Resume';
+                        restartMenuButton.classList.remove('hidden');
+                    } else {
+                        resumeButton.textContent = 'Start';
+                        restartMenuButton.classList.add('hidden');
+                    }
+                    // Pause music if playing
+                    if (bgmController && bgmController.isPlaying()) {
+                        bgmController.pause();
+                    }
+                } else {
+                    // Hide pause menu
+                    pauseModal.classList.add('hidden');
+                    
+                    // Initialize background music on first interaction if not already done
+                    if (!bgmController) {
+                        initBackgroundMusic();
+                    }
+                    
+                    // Resume/start music if enabled and not game over
+                    if (isMusicEnabled && !isGameOver) {
+                        isMusicPaused = false;
+                        startBackgroundMusic();
+                    }
+                }
+            }
+            
+            // --- Toggle Music ---
+            function toggleMusic() {
+                isMusicEnabled = !isMusicEnabled;
+                musicStatus.textContent = isMusicEnabled ? 'On' : 'Off';
+                
+                if (isMusicEnabled) {
+                    // Enable music - start playing if not in pause menu and not game over
+                    if (pauseModal.classList.contains('hidden') && !isGameOver) {
+                        startBackgroundMusic();
+                    }
+                } else {
+                    // Disable music - stop if playing
+                    if (bgmController && bgmController.isPlaying()) {
+                        bgmController.pause();
+                    }
+                }
+            }
+            
+            // --- Toggle Sounds ---
+            function toggleSounds() {
+                areSoundsEnabled = !areSoundsEnabled;
+                soundsStatus.textContent = areSoundsEnabled ? 'On' : 'Off';
+            }
+            
+            // --- Restart from Pause Menu ---
+            function handleRestartFromMenu() {
+                // Close pause menu first
+                pauseModal.classList.add('hidden');
+                // Show confirmation modal
+                restartConfirmModal.classList.remove('hidden');
             }
             
             function showRestartConfirmation() {
@@ -1322,9 +1422,13 @@
                 headerEl.removeEventListener('pointermove', stopToolbarEventBubbling);
                 headerEl.removeEventListener('pointerup', stopToolbarEventBubbling);
                 restartButton.removeEventListener('click', handleRestart);
-                newGameButton.removeEventListener('click', showRestartConfirmation);
+                restartMenuButton.removeEventListener('click', handleRestartFromMenu);
                 restartConfirmYes.removeEventListener('click', confirmRestart);
-                restartConfirmNo.removeEventListener('click', cancelRestart); 
+                restartConfirmNo.removeEventListener('click', cancelRestart);
+                burgerMenuButton.removeEventListener('click', togglePauseMenu);
+                resumeButton.removeEventListener('click', togglePauseMenu);
+                musicToggle.removeEventListener('click', toggleMusic);
+                soundsToggle.removeEventListener('click', toggleSounds); 
                 Events.off(engine);
                 Events.off(render);
                 World.clear(world, false);
@@ -1556,15 +1660,11 @@
                         if (bgmController && bgmController.isPlaying()) {
                             bgmController.pause();
                             isMusicPaused = true;
-                            if (startResumeButton && !startModal.classList.contains('hidden')) {
-                                startResumeButton.textContent = 'Resume';
-                            }
                         }
                     } else {
                         // Page gained focus/visibility
-                        resumeBackgroundMusic();
-                        if (bgmController && bgmController.isPlaying() && startResumeButton && !startModal.classList.contains('hidden')) {
-                            startResumeButton.textContent = 'Pause';
+                        if (isMusicEnabled && pauseModal.classList.contains('hidden') && !isGameOver) {
+                            resumeBackgroundMusic();
                         }
                     }
                 });
@@ -1574,47 +1674,35 @@
                     if (bgmController && bgmController.isPlaying()) {
                         bgmController.pause();
                         isMusicPaused = true;
-                        if (startResumeButton && !startModal.classList.contains('hidden')) {
-                            startResumeButton.textContent = 'Resume';
-                        }
                     }
                 });
                 
                 window.addEventListener('focus', () => {
-                    resumeBackgroundMusic();
-                    if (bgmController && bgmController.isPlaying() && startResumeButton && !startModal.classList.contains('hidden')) {
-                        startResumeButton.textContent = 'Pause';
+                    if (isMusicEnabled && pauseModal.classList.contains('hidden') && !isGameOver) {
+                        resumeBackgroundMusic();
+                    }
+                });
                     }
                 });
             }
             
-            // --- Setup Start/Resume Modal ---
-            function setupStartModal() {
+            // --- Setup Pause Modal ---
+            function setupPauseModal() {
                 // Set initial button text based on saved game
                 if (localStorage.getItem(GAME_STATE_KEY)) {
-                    startResumeButton.textContent = 'Resume';
+                    resumeButton.textContent = 'Resume';
+                    restartMenuButton.classList.remove('hidden');
                 } else {
-                    startResumeButton.textContent = 'Start';
+                    resumeButton.textContent = 'Start';
+                    restartMenuButton.classList.add('hidden');
                 }
                 
-                // Modal is visible by default, add click handler
-                startResumeButton.addEventListener('click', () => {
-                    if (!bgmController) {
-                        // First click - initialize and start music
-                        initBackgroundMusic();
-                        startBackgroundMusic();
-                        startModal.classList.add('hidden');
-                        isMusicPaused = false;
-                    } else if (!bgmController.isPlaying()) {
-                        // Music is paused - resume it
-                        resumeBackgroundMusic();
-                        startResumeButton.textContent = 'Pause';
-                    } else {
-                        // Music is playing - pause it
-                        stopBackgroundMusic();
-                        startResumeButton.textContent = 'Resume';
-                    }
-                });
+                // Initialize audio toggle states
+                musicStatus.textContent = isMusicEnabled ? 'On' : 'Off';
+                soundsStatus.textContent = areSoundsEnabled ? 'On' : 'Off';
+                
+                // Modal is visible by default on first load
+                // The togglePauseMenu function handles showing/hiding and music control
             }
         
         }; // End of window.onload
