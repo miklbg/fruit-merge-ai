@@ -604,7 +604,7 @@
                             
                             if (img && img.complete) {
                                 // Increase image size to 3x the radius to fill the circle better
-                                const imageSize = scaledRadius * 3;
+                                const imageSize = scaledRadius * 1;
                                 const offset = imageSize / 2;
                                 context.save();
                                 context.translate(body.position.x, body.position.y);
@@ -664,7 +664,7 @@
                 if (img && img.complete) {
                     previewFruitEl.style.backgroundImage = `url('${fruitData.imagePath}')`;
                     // Scale up the background image to match dropped fruit size (150% of diameter = 3x radius)
-                    previewFruitEl.style.backgroundSize = '150%';
+                    previewFruitEl.style.backgroundSize = '100%';
                     previewFruitEl.style.backgroundPosition = 'center';
                     previewFruitEl.style.backgroundRepeat = 'no-repeat';
                     previewFruitEl.textContent = '';
