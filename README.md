@@ -46,6 +46,9 @@ Background music is sourced from Pixabay:
 - **Drop Sound**: A descending tone played when fruits are released
 - **Merge Sound**: A cheerful ascending chime played when fruits merge
 - **Background Music**: A continuous looping melody during gameplay that fades out when the game is paused or ended
+  - **Volume Control**: Uses Web Audio API GainNode for reliable, cross-browser volume control (default ~0.25 linear, approximately -12dB)
+  - **iOS Safari Support**: Automatically unlocks AudioContext on first user gesture to satisfy iOS Safari autoplay restrictions
+  - **Fallback**: Gracefully falls back to HTMLAudioElement.volume when Web Audio API is not available
 - **Focus Handling**: Music automatically pauses when you switch tabs or apps, and resumes when you return to the game
 
 ## 🛠️ Technical Details
