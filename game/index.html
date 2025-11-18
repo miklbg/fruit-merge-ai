@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Fruit Merge Game</title>
     
     <!-- Load Tailwind CSS -->
@@ -82,6 +82,10 @@
             align-items: center;
             text-shadow: 0 0 5px rgba(0,0,0,0.2);
             backface-visibility: hidden;
+            /* Crisp image rendering for sharper preview */
+            image-rendering: crisp-edges;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
         }
 
         #game-canvas-wrapper {
@@ -169,6 +173,8 @@
             background: linear-gradient(to top, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.8));
             backdrop-filter: blur(8px);
             padding: 8px;
+            /* Add safe area padding for iOS Safari to prevent overlap with address bar */
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
             display: flex;
             justify-content: center;
             align-items: center;
@@ -194,6 +200,10 @@
             background-repeat: no-repeat;
             transition: filter 0.5s ease, opacity 0.5s ease;
             border: 2px solid rgba(0, 0, 0, 0.1);
+            /* Crisp image rendering for sharper icons */
+            image-rendering: crisp-edges;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
         }
         
         .evolution-fruit.locked {
@@ -849,9 +859,8 @@
                                 context.save();
                                 context.translate(body.position.x, body.position.y);
                                 context.rotate(body.angle);
-                                // Enable image smoothing for better quality
-                                context.imageSmoothingEnabled = true;
-                                context.imageSmoothingQuality = 'high';
+                                // Disable image smoothing for crisp, sharp rendering
+                                context.imageSmoothingEnabled = false;
                                 context.drawImage(img, -offsetX, -offsetY, drawWidth, drawHeight);
                                 context.restore();
                             }
