@@ -900,10 +900,29 @@
                 restartConfirmNo.addEventListener('click', cancelRestart);
             }
             
+            // --- Helper to check if any modal is visible ---
+            function isModalVisible() {
+                return !startModal.classList.contains('hidden') || 
+                       !gameOverModal.classList.contains('hidden') || 
+                       !restartConfirmModal.classList.contains('hidden');
+            }
+            
             // --- Event Handlers (to allow removal) ---
-            function handlePointerDown(e) { e.preventDefault(); moveFruit(e.clientX); }
-            function handlePointerMove(e) { e.preventDefault(); moveFruit(e.clientX); }
-            function handlePointerUp(e) { e.preventDefault(); dropFruit(); }
+            function handlePointerDown(e) { 
+                if (isModalVisible()) return;
+                e.preventDefault(); 
+                moveFruit(e.clientX); 
+            }
+            function handlePointerMove(e) { 
+                if (isModalVisible()) return;
+                e.preventDefault(); 
+                moveFruit(e.clientX); 
+            }
+            function handlePointerUp(e) { 
+                if (isModalVisible()) return;
+                e.preventDefault(); 
+                dropFruit(); 
+            }
             
             function showRestartConfirmation() {
                 if (!isGameOver) {
