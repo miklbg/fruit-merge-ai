@@ -704,7 +704,19 @@
                         updateEvolutionRow(fruit.level);
                     });
                     score = loadedState.score;
-                    nextFruitLevel = loadedState.nextFruitLevel;
+
+                    // Restore both current and next fruit levels from saved state
+                    if (loadedState.currentFruitLevel !== undefined) {
+                        // Set nextFruitLevel first since spawnCurrentFruit() uses it
+                        nextFruitLevel = loadedState.currentFruitLevel;
+                        spawnCurrentFruit(); // This will set currentFruitLevel = nextFruitLevel
+                        nextFruitLevel = loadedState.nextFruitLevel; // Then restore the actual next fruit
+                    } else {
+                        // Fallback for old save data without currentFruitLevel
+                        nextFruitLevel = loadedState.nextFruitLevel;
+                        spawnCurrentFruit(); 
+                        spawnNextFruit(); 
+                    }
                     
                     // Also mark the next fruit as achieved
                     updateEvolutionRow(nextFruitLevel);
