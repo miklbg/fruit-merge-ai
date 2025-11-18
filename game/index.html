@@ -148,6 +148,46 @@
             opacity: 1;
             transition: transform 0.8s ease-out, opacity 0.8s ease-out;
         }
+        
+        #fruit-evolution-row {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 25;
+            background: linear-gradient(to top, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.8));
+            backdrop-filter: blur(8px);
+            padding: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            pointer-events: none;
+        }
+        
+        .evolution-fruit {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: filter 0.5s ease, opacity 0.5s ease;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .evolution-fruit.locked {
+            filter: blur(4px) grayscale(0.5);
+            opacity: 0.4;
+        }
+        
+        .evolution-fruit.unlocked {
+            filter: none;
+            opacity: 1;
+        }
     </style>
 </head>
 <!-- --- FIX: Bright body classes --- -->
@@ -198,6 +238,7 @@
         <div id="preview-fruit"></div>
         <div id="game-canvas-wrapper"></div>
         <div id="confetti-container"></div>
+        <div id="fruit-evolution-row"></div>
 
         <!-- --- FIX: Bright game over modal --- -->
         <div id="game-over-modal" class="hidden absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-20 flex flex-col justify-center items-center text-center p-8">
@@ -253,6 +294,7 @@
             const restartConfirmModal = document.getElementById('restart-confirm-modal');
             const restartConfirmYes = document.getElementById('restart-confirm-yes');
             const restartConfirmNo = document.getElementById('restart-confirm-no');
+            const fruitEvolutionRow = document.getElementById('fruit-evolution-row');
 
             // --- Matter.js modules ---
             const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Common } = Matter;
@@ -293,6 +335,7 @@
             const BASE_WALL_THICKNESS = 40; 
             const HIGHSCORE_KEY = 'fruit-merge-highscore';
             const GAME_STATE_KEY = 'fruit-merge-gamestate';
+            const ACHIEVEMENTS_KEY = 'fruit-merge-achievements';
             
             // Preload fruit images
             const fruitImages = {};
@@ -313,6 +356,7 @@
             let collisionTimeout = null;
             let currentPreviewX = 0; 
             let saveCounter = 0; 
+            let achievedFruits = new Set(); // Track which fruit levels have been achieved 
             
             let bodiesToRemoveSet = new Set();
             let bodiesToAddArray = [];
@@ -470,6 +514,65 @@
             let dropAreaY = 0;
             let wallThickness = 40; 
 
+            // --- Initialize Fruit Evolution Row ---
+            function initFruitEvolutionRow() {
+                fruitEvolutionRow.innerHTML = '';
+                
+                // Create evolution fruit icons
+                FRUITS.forEach((fruit, index) => {
+                    const fruitIcon = document.createElement('div');
+                    fruitIcon.className = 'evolution-fruit';
+                    fruitIcon.style.backgroundImage = `url('${fruit.imagePath}')`;
+                    fruitIcon.setAttribute('data-level', index);
+                    
+                    // Check if fruit has been achieved
+                    if (achievedFruits.has(index)) {
+                        fruitIcon.classList.add('unlocked');
+                    } else {
+                        fruitIcon.classList.add('locked');
+                    }
+                    
+                    fruitEvolutionRow.appendChild(fruitIcon);
+                });
+            }
+            
+            // --- Update Evolution Row ---
+            function updateEvolutionRow(fruitLevel) {
+                // Mark this fruit level and all lower levels as achieved
+                for (let i = 0; i <= fruitLevel; i++) {
+                    achievedFruits.add(i);
+                }
+                
+                // Save achievements to localStorage
+                localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(Array.from(achievedFruits)));
+                
+                // Update the visual display
+                const icons = fruitEvolutionRow.querySelectorAll('.evolution-fruit');
+                icons.forEach((icon, index) => {
+                    if (achievedFruits.has(index)) {
+                        icon.classList.remove('locked');
+                        icon.classList.add('unlocked');
+                    }
+                });
+            }
+            
+            // --- Load Achievements ---
+            function loadAchievements() {
+                const savedAchievements = localStorage.getItem(ACHIEVEMENTS_KEY);
+                if (savedAchievements) {
+                    try {
+                        const achievementsArray = JSON.parse(savedAchievements);
+                        achievedFruits = new Set(achievementsArray);
+                    } catch (e) {
+                        console.error("Could not parse saved achievements:", e);
+                        achievedFruits = new Set();
+                    }
+                } else {
+                    // By default, the first fruit (level 0) is always unlocked
+                    achievedFruits = new Set([0]);
+                }
+            } 
+
             
             // --- ROBUST STARTUP ---
             const layoutCheckInterval = setInterval(() => {
@@ -492,6 +595,9 @@
 
             // --- Game Initialization ---
             function initGame() {
+                // Load achievements first
+                loadAchievements();
+                
                 headerHeight = headerEl.clientHeight;
                 boxWidth = gameWrapper.clientWidth; 
                 boxHeight = gameWrapper.clientHeight - headerHeight; 
@@ -593,9 +699,16 @@
                         Body.setVelocity(body, { x: fruit.velocityX * loadedScaleFactor, y: fruit.velocityY * loadedScaleFactor });
                         Body.setAngularVelocity(body, fruit.angularVelocity);
                         World.add(world, body);
+                        
+                        // Mark this fruit level as achieved
+                        updateEvolutionRow(fruit.level);
                     });
                     score = loadedState.score;
                     nextFruitLevel = loadedState.nextFruitLevel;
+                    
+                    // Also mark the next fruit as achieved
+                    updateEvolutionRow(nextFruitLevel);
+                    
                     spawnCurrentFruit(); 
                     spawnNextFruit(); 
                 } else {
@@ -610,6 +723,9 @@
 
                 Render.run(render);
                 Runner.run(runner, engine);
+                
+                // Initialize fruit evolution row
+                initFruitEvolutionRow();
 
                 Events.on(render, 'afterRender', () => {
                     const context = render.context;
@@ -764,6 +880,9 @@
                     return;
                 }
                 
+                // Update evolution row when a fruit is dropped
+                updateEvolutionRow(currentFruitLevel);
+                
                 World.add(world, droppedFruit);
                 
                 // Play drop sound effect
@@ -912,6 +1031,10 @@
                             World.add(world, newFruit);
                             updateScore(score + data.score); 
                             createConfetti(data.x, data.y, data.color1, data.color2); 
+                            
+                            // Update evolution row when new fruit level is achieved
+                            updateEvolutionRow(data.level);
+                            
                             didMerge = true;
                         });
                         
