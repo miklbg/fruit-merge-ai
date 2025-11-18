@@ -75,6 +75,10 @@
             right: 0;
             bottom: 0;
             z-index: 1;
+            background-image: url('assets/weave_background.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
         
         canvas {
@@ -527,8 +531,8 @@
                         width: boxWidth,
                         height: boxHeight,
                         wireframes: false,
-                        /* --- FIX: Bright render background --- */
-                        background: '#fff7ed' // bg-orange-50
+                        /* Transparent background to show weave_background.png */
+                        background: 'transparent'
                     }
                 });
 
