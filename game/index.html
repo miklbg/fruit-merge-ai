@@ -136,14 +136,30 @@
         }
 
         #game-over-modal {
-            transition: opacity 0.3s ease, transform 0.3s ease;
             pointer-events: auto;
         }
 
         #game-over-modal.hidden {
             opacity: 0;
-            transform: scale(0.9);
             pointer-events: none;
+        }
+        
+        #game-over-text {
+            transition: opacity 0.5s ease;
+            opacity: 0;
+        }
+        
+        #game-over-text.visible {
+            opacity: 1;
+        }
+        
+        #game-over-content {
+            transition: opacity 0.5s ease;
+            opacity: 0;
+        }
+        
+        #game-over-content.visible {
+            opacity: 1;
         }
 
         #restart-confirm-modal {
@@ -277,14 +293,16 @@
             <div id="confetti-container"></div>
 
             <!-- --- FIX: Bright game over modal --- -->
-            <div id="game-over-modal" class="hidden absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-20 flex flex-col justify-center items-center text-center p-8">
-                <h2 class="text-5xl font-bold text-red-500 mb-4">Game Over</h2>
-                <p class="text-xl mb-2">Final Score:</p>
-                <div id="final-score" class="text-4xl font-bold mb-8">0</div>
-                <!-- --- FIX: Playful button color --- -->
-                <button id="restart-button" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-green-400 transition-all">
-                    Restart
-                </button>
+            <div id="game-over-modal" class="hidden absolute inset-0 z-20 flex flex-col justify-center items-center text-center p-8">
+                <h2 id="game-over-text" class="text-5xl font-bold text-red-500 mb-4">Game Over</h2>
+                <div id="game-over-content" class="bg-white/70 text-gray-900 backdrop-blur-md rounded-lg p-8 flex flex-col items-center">
+                    <p class="text-xl mb-2">Final Score:</p>
+                    <div id="final-score" class="text-4xl font-bold mb-8">0</div>
+                    <!-- --- FIX: Playful button color --- -->
+                    <button id="restart-button" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-green-400 transition-all">
+                        Restart
+                    </button>
+                </div>
             </div>
 
             <!-- Restart Confirmation Modal -->
@@ -329,6 +347,8 @@
             const nextFruitImgEl = document.getElementById('next-fruit-img');
             const newGameButton = document.getElementById('new-game-button');
             const gameOverModal = document.getElementById('game-over-modal');
+            const gameOverText = document.getElementById('game-over-text');
+            const gameOverContent = document.getElementById('game-over-content');
             const finalScoreEl = document.getElementById('final-score');
             const restartButton = document.getElementById('restart-button');
             const restartConfirmModal = document.getElementById('restart-confirm-modal');
@@ -709,6 +729,8 @@
                 highScoreEl.textContent = highScore;
                 
                 gameOverModal.classList.add('hidden');
+                gameOverText.classList.remove('visible');
+                gameOverContent.classList.remove('visible');
                 
                 bodiesToRemoveSet.clear();
                 bodiesToAddArray = [];
@@ -1244,6 +1266,11 @@
             function handleRestart() {
                 localStorage.removeItem(GAME_STATE_KEY);
                 
+                // Reset game over modal visibility states
+                gameOverModal.classList.add('hidden');
+                gameOverText.classList.remove('visible');
+                gameOverContent.classList.remove('visible');
+                
                 // Stop background music before restart
                 stopBackgroundMusic();
                 
@@ -1298,7 +1325,15 @@
                     World.remove(world, groundWall);
                 }
                 
-                // Let the fruits fall for 2 seconds before showing game over modal
+                // Show the game over modal container (without content visible yet)
+                gameOverModal.classList.remove('hidden');
+                
+                // Immediately fade in the "Game Over" text while fruits are falling
+                setTimeout(() => {
+                    gameOverText.classList.add('visible');
+                }, 50);
+                
+                // Let the fruits fall for 2 seconds, then show modal content
                 setTimeout(() => {
                     Runner.stop(runner);
                     finalScoreEl.textContent = score;
@@ -1306,8 +1341,8 @@
                     localStorage.setItem(HIGHSCORE_KEY, highScore.toString());
                     localStorage.removeItem(GAME_STATE_KEY);
 
-                    // Show game over modal (it will fade in due to CSS transition)
-                    gameOverModal.classList.remove('hidden');
+                    // Fade in the modal background, score, and restart button
+                    gameOverContent.classList.add('visible');
                 }, 2000);
             }
 
