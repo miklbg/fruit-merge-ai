@@ -325,7 +325,7 @@
             <!-- --- FIX: Bright game over modal --- -->
             <div id="game-over-modal" class="hidden absolute inset-0 z-20 flex flex-col justify-center items-center text-center p-8">
                 <h2 id="game-over-text" class="text-5xl font-bold text-red-500 mb-4">Game Over</h2>
-                <div id="game-over-content" class="bg-white/70 text-gray-900 backdrop-blur-md rounded-lg p-8 flex flex-col items-center">
+                <div id="game-over-content" class="bg-white text-gray-900 rounded-lg p-8 flex flex-col items-center shadow-2xl">
                     <p class="text-xl mb-2">Final Score:</p>
                     <div id="final-score" class="text-4xl font-bold mb-8">0</div>
                     <!-- --- FIX: Playful button color --- -->
@@ -1489,7 +1489,6 @@
                 
                 // Let the fruits fall for 2 seconds, then show modal content
                 setTimeout(() => {
-                    Runner.stop(runner);
                     finalScoreEl.textContent = score;
 
                     localStorage.setItem(HIGHSCORE_KEY, highScore.toString());
@@ -1498,6 +1497,11 @@
                     // Fade in the modal background, score, and restart button
                     gameOverContent.classList.add('visible');
                 }, 2000);
+                
+                // Keep the game running for a few more seconds to ensure all fruits fall off screen
+                setTimeout(() => {
+                    Runner.stop(runner);
+                }, 5000);
             }
 
             // --- Handle Window Resize ---
