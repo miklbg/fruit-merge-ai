@@ -1,7 +1,36 @@
-# merge_game
-An AI generated game
+# Fruit Merge Game
 
-## Sound Effects and Music Attribution
+A physics-based puzzle game where you drop and merge fruits to create larger fruits and score points!
+
+## 🎮 How to Play
+
+1. **Open** `game/index.html` in your web browser
+2. **Click** "Start" to begin playing
+3. **Drag** your mouse or finger to position the fruit
+4. **Click/Tap** to drop the fruit into the container
+5. **Merge** two identical fruits to create the next level fruit
+6. **Score** points with each merge - larger fruits give more points!
+7. **Game Over** when fruits stack above the red line
+
+## 🍓 Fruit Levels
+
+The game features 10 fruit levels that merge progressively:
+- 🍒 Cherry (Level 0) → 🍓 Strawberry (Level 1) → 🍇 Grapes (Level 2)
+- 🍊 Orange (Level 3) → 🍎 Apple (Level 4) → 🍐 Pear (Level 5)
+- 🍑 Peach (Level 6) → 🍍 Pineapple (Level 7) → 🍈 Melon (Level 8)
+- 🍉 Watermelon (Level 9) - Maximum size!
+
+## ✨ Features
+
+- **Physics Engine**: Realistic fruit physics powered by Matter.js
+- **Responsive Design**: Works on desktop and mobile devices
+- **Score Tracking**: Keep track of your high score with localStorage
+- **Game State Persistence**: Resume your game where you left off
+- **Visual Effects**: Confetti animations when fruits merge
+- **Audio Feedback**: Sound effects and background music
+- **Smart Controls**: Touch and mouse support with preview positioning
+
+## 🔊 Audio Attribution
 
 ### Sound Effects
 Sound effects (drop and merge sounds) are generated programmatically using the Web Audio API. These are original works created specifically for this game and are in the **public domain**.
@@ -22,29 +51,25 @@ Background music is sourced from Pixabay:
   - **Fallback**: Gracefully falls back to HTMLAudioElement.volume when Web Audio API is not available
 - **Focus Handling**: Music automatically pauses when you switch tabs or apps, and resumes when you return to the game
 
-### Adjusting Background Music Volume
+## 🛠️ Technical Details
 
-The background music volume can be adjusted by modifying the `defaultGain` parameter in `game/index.html`:
+- **No Build Required**: Pure HTML/CSS/JavaScript - just open and play!
+- **Styling**: Tailwind CSS (loaded via CDN)
+- **Physics**: Matter.js 0.19.0 (loaded via CDN)
+- **Storage**: LocalStorage for game state and high scores
+- **Browser Compatibility**: Modern browsers with HTML5 Audio and Canvas support
 
-```javascript
-bgmController = createBgmController({
-    audioElOrSrc: 'assets/children-music-loop-creative-fun-262427.mp3',
-    defaultGain: 0.25,  // Linear gain (0.0 to 1.0)
-    loop: true
-});
+## 🚀 Quick Start
+
+Simply open `game/index.html` in your web browser - no installation or build process required!
+
+For local server testing:
+```bash
+cd game
+python3 -m http.server 8080
+# Visit http://localhost:8080
 ```
 
-You can also use decibel values using the helper functions:
-```javascript
-// Set volume to -6dB (approximately 0.5 linear)
-bgmController.setGainDb(-6);
+## 📝 License
 
-// Or use linear values directly
-bgmController.setGainLinear(0.5);
-```
-
-**Common Volume Levels:**
-- `-12dB` ≈ `0.25` linear (default, pleasant background level)
-- `-6dB` ≈ `0.5` linear (medium)
-- `0dB` = `1.0` linear (full volume)
-- `-20dB` ≈ `0.1` linear (very quiet)
+This game is AI-generated. See LICENSE file for details.
