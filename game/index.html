@@ -437,7 +437,15 @@
                 const img = new Image();
                 img.src = fruit.imagePath;
                 fruitImages[fruit.level] = img;
-            }); 
+            });
+            
+            // Preload wall texture images
+            const weaveBottomImg = new Image();
+            weaveBottomImg.src = 'assets/weave_bottom.jpg';
+            const weaveSidesImg = new Image();
+            weaveSidesImg.src = 'assets/weave_sides.jpg';
+            const weaveEndsImg = new Image();
+            weaveEndsImg.src = 'assets/weave_ends.jpg'; 
 
             // --- Game State ---
             let engine, render, runner, world;
@@ -800,8 +808,11 @@
                     isStatic: true,
                     restitution: 0.1,
                     friction: 0.2,
-                    /* --- FIX: Playful wall color --- */
-                    render: { fillStyle: '#b45309' } // bg-amber-700
+                    render: { 
+                        fillStyle: 'transparent', // Make transparent so we can draw textures
+                        strokeStyle: 'transparent',
+                        lineWidth: 0
+                    }
                 };
 
                 World.add(world, [
@@ -897,6 +908,60 @@
 
                     context.save(); 
                     
+                    // First, render wall textures
+                    bodies.forEach(body => {
+                        if (body.label === 'ground' && weaveBottomImg.complete) {
+                            // Floor: weave_bottom.jpg (repeat-x)
+                            const pattern = context.createPattern(weaveBottomImg, 'repeat-x');
+                            if (pattern) {
+                                context.save();
+                                context.translate(body.position.x, body.position.y);
+                                context.rotate(body.angle);
+                                context.fillStyle = pattern;
+                                context.fillRect(
+                                    -boxWidth / 2,
+                                    -wallThickness / 2,
+                                    boxWidth,
+                                    wallThickness
+                                );
+                                context.restore();
+                            }
+                        } else if ((body.label === 'wall-left' || body.label === 'wall-right') && weaveSidesImg.complete && weaveEndsImg.complete) {
+                            // Sides: weave_sides.jpg (repeat-y)
+                            const pattern = context.createPattern(weaveSidesImg, 'repeat-y');
+                            if (pattern) {
+                                context.save();
+                                context.translate(body.position.x, body.position.y);
+                                context.rotate(body.angle);
+                                context.fillStyle = pattern;
+                                // Draw the main side wall
+                                context.fillRect(
+                                    -wallThickness / 2,
+                                    -boxHeight / 2,
+                                    wallThickness,
+                                    boxHeight
+                                );
+                                context.restore();
+                            }
+                            
+                            // Top of sides: weave_ends.jpg (drawn at the top of each side wall)
+                            context.save();
+                            context.translate(body.position.x, body.position.y);
+                            context.rotate(body.angle);
+                            // Draw the end cap at the top of the side wall
+                            const endHeight = weaveEndsImg.height * (wallThickness / weaveEndsImg.width); // Scale to match wall width
+                            context.drawImage(
+                                weaveEndsImg,
+                                -wallThickness / 2,
+                                -boxHeight / 2,
+                                wallThickness,
+                                endHeight
+                            );
+                            context.restore();
+                        }
+                    });
+                    
+                    // Then render fruits on top
                     bodies.forEach(body => {
                         if (body.label !== 'fruit') return;
 
@@ -1585,7 +1650,11 @@
                         isStatic: true,
                         restitution: 0.1,
                         friction: 0.2,
-                        render: { fillStyle: '#b45309' }
+                        render: { 
+                            fillStyle: 'transparent',
+                            strokeStyle: 'transparent',
+                            lineWidth: 0
+                        }
                     };
                     
                     // Only add ground wall if game is not over
