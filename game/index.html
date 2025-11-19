@@ -1515,6 +1515,12 @@
                 // Stop background music before restart
                 stopBackgroundMusic();
                 
+                // Clear collision timeout if it exists
+                if (collisionTimeout) {
+                    clearTimeout(collisionTimeout);
+                    collisionTimeout = null;
+                }
+                
                 Runner.stop(runner);
                 Render.stop(render);
                 gameWrapper.removeEventListener('pointerdown', handlePointerDown);
@@ -1539,6 +1545,13 @@
                 if (render.canvas) {
                     render.canvas.remove();
                 }
+                
+                // Clear any remaining confetti pieces
+                confettiContainer.innerHTML = '';
+                
+                // Reset preview fruit visibility
+                previewFruitEl.style.opacity = '0.8';
+                
                 initGame(); 
             }
 
