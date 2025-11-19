@@ -462,6 +462,8 @@
             let isDropping = false; 
             let lastDropTime = 0; // Track the time of the last fruit drop
             let collisionTimeout = null;
+            let spawnTimeout = null; // Track the spawn timeout from dropFruit
+            let gameOverTimeouts = []; // Track timeouts from triggerGameOver
             let currentPreviewX = 0; 
             let saveCounter = 0; 
             let achievedFruits = new Set(); // Track which fruit levels have been achieved 
@@ -479,6 +481,7 @@
             let isMusicEnabled = true; // User preference for music
             let areSoundsEnabled = true; // User preference for sound effects
             let isMusicPaused = false; // Current music playback state
+            let musicFadeInterval = null; // Track the music fade interval
 
             function initAudioContext() {
                 if (!audioContext) {
@@ -596,15 +599,21 @@
                 if (bgmController && bgmController.isPlaying()) {
                     isMusicPaused = true;
                     
+                    // Clear any existing fade interval first
+                    if (musicFadeInterval) {
+                        clearInterval(musicFadeInterval);
+                    }
+                    
                     // Fade out effect using Web Audio gain
-                    const fadeOutInterval = setInterval(() => {
+                    musicFadeInterval = setInterval(() => {
                         const currentGain = bgmController.getGainLinear();
                         if (currentGain > 0.01) {
                             bgmController.setGainLinear(currentGain - 0.01);
                         } else {
                             bgmController.pause();
                             bgmController.setGainLinear(0.25); // Reset gain for next play
-                            clearInterval(fadeOutInterval);
+                            clearInterval(musicFadeInterval);
+                            musicFadeInterval = null;
                         }
                     }, 50);
                 }
@@ -1219,13 +1228,14 @@
                     collisionTimeout = null;
                 }, 1500);
 
-                setTimeout(() => {
+                spawnTimeout = setTimeout(() => {
                     if (!isGameOver) {
                         spawnCurrentFruit(); 
                         spawnNextFruit(); 
                         previewFruitEl.style.opacity = '0.8';
                         isDropping = false;
                     }
+                    spawnTimeout = null;
                 }, DROP_COOLDOWN_MS); // Show preview fruit only after cooldown completes
             }
 
@@ -1562,6 +1572,28 @@
                 // Stop background music before restart
                 stopBackgroundMusic();
                 
+                // Extra safety: clear music fade interval if it exists
+                if (musicFadeInterval) {
+                    clearInterval(musicFadeInterval);
+                    musicFadeInterval = null;
+                }
+                
+                // Clear collision timeout if it exists
+                if (collisionTimeout) {
+                    clearTimeout(collisionTimeout);
+                    collisionTimeout = null;
+                }
+                
+                // Clear spawn timeout if it exists
+                if (spawnTimeout) {
+                    clearTimeout(spawnTimeout);
+                    spawnTimeout = null;
+                }
+                
+                // Clear all game over timeouts if they exist
+                gameOverTimeouts.forEach(timeout => clearTimeout(timeout));
+                gameOverTimeouts = [];
+                
                 Runner.stop(runner);
                 Render.stop(render);
                 gameWrapper.removeEventListener('pointerdown', handlePointerDown);
@@ -1586,6 +1618,13 @@
                 if (render.canvas) {
                     render.canvas.remove();
                 }
+                
+                // Clear any remaining confetti pieces
+                confettiContainer.innerHTML = '';
+                
+                // Reset preview fruit visibility
+                previewFruitEl.style.opacity = '0.8';
+                
                 initGame(); 
             }
 
@@ -1621,12 +1660,12 @@
                 gameOverModal.classList.remove('hidden');
                 
                 // Immediately fade in the "Game Over" text while fruits are falling
-                setTimeout(() => {
+                gameOverTimeouts.push(setTimeout(() => {
                     gameOverText.classList.add('visible');
-                }, 50);
+                }, 50));
                 
                 // Let the fruits fall for 2 seconds, then show modal content
-                setTimeout(() => {
+                gameOverTimeouts.push(setTimeout(() => {
                     finalScoreEl.textContent = score;
 
                     localStorage.setItem(HIGHSCORE_KEY, highScore.toString());
@@ -1634,12 +1673,12 @@
 
                     // Fade in the modal background, score, and restart button
                     gameOverContent.classList.add('visible');
-                }, 2000);
+                }, 2000));
                 
                 // Keep the game running for a few more seconds to ensure all fruits fall off screen
-                setTimeout(() => {
+                gameOverTimeouts.push(setTimeout(() => {
                     Runner.stop(runner);
-                }, 5000);
+                }, 5000));
             }
 
             // --- Handle Window Resize ---
