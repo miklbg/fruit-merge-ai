@@ -412,17 +412,17 @@
 
             const FRUITS = [
                 // Use 'baseRadius' for all pixel values - all fruits are now circles
-                // SVG paths are tried first, with PNG as fallback
-                { level: 0, baseRadius: 22, color: '#2E3771', svgPath: 'assets/1-blueberry.svg', pngPath: 'assets/1-blueberry.png', score: 5, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 1, baseRadius: 26, color: '#842F28', svgPath: 'assets/2-strawberry.svg', pngPath: 'assets/2-strawberry.png', score: 10, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 2, baseRadius: 34, color: '#612B53', svgPath: 'assets/6-grapes.svg', pngPath: 'assets/6-grapes.png', score: 20, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 3, baseRadius: 38, color: '#B06322', svgPath: 'assets/5-orange.svg', pngPath: 'assets/5-orange.png', score: 35, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 4, baseRadius: 48, color: '#952C29', svgPath: 'assets/4-apple.svg', pngPath: 'assets/4-apple.png', score: 55, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 5, baseRadius: 58, color: '#AE993B', svgPath: 'assets/3-lemon.svg', pngPath: 'assets/3-lemon.png', score: 80, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 6, baseRadius: 66, color: '#8B8A62', svgPath: 'assets/7-cantaloupe.svg', pngPath: 'assets/7-cantaloupe.png', score: 110, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 7, baseRadius: 78, color: '#A27620', svgPath: 'assets/9-pineapple.svg', pngPath: 'assets/9-pineapple.png', score: 150, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 8, baseRadius: 90, color: '#67412B', svgPath: 'assets/8-coconut.svg', pngPath: 'assets/8-coconut.png', score: 200, clipPath: POLYGON_CLIP_PATHS['circle'] },
-                { level: 9, baseRadius: 102, color: '#5B723A', svgPath: 'assets/10-watermelon.svg', pngPath: 'assets/10-watermelon.png', score: 300, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                // PNG images only
+                { level: 0, baseRadius: 22, color: '#2E3771', imagePath: 'assets/1-blueberry.png', score: 5, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 1, baseRadius: 26, color: '#842F28', imagePath: 'assets/2-strawberry.png', score: 10, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 2, baseRadius: 34, color: '#612B53', imagePath: 'assets/6-grapes.png', score: 20, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 3, baseRadius: 38, color: '#B06322', imagePath: 'assets/5-orange.png', score: 35, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 4, baseRadius: 48, color: '#952C29', imagePath: 'assets/4-apple.png', score: 55, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 5, baseRadius: 58, color: '#AE993B', imagePath: 'assets/3-lemon.png', score: 80, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 6, baseRadius: 66, color: '#8B8A62', imagePath: 'assets/7-cantaloupe.png', score: 110, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 7, baseRadius: 78, color: '#A27620', imagePath: 'assets/9-pineapple.png', score: 150, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 8, baseRadius: 90, color: '#67412B', imagePath: 'assets/8-coconut.png', score: 200, clipPath: POLYGON_CLIP_PATHS['circle'] },
+                { level: 9, baseRadius: 102, color: '#5B723A', imagePath: 'assets/10-watermelon.png', score: 300, clipPath: POLYGON_CLIP_PATHS['circle'] },
             ];
 
             const MAX_FRUIT_LEVEL = FRUITS.length - 1;
@@ -435,57 +435,28 @@
             const GAME_STATE_KEY = 'fruit-merge-gamestate';
             const ACHIEVEMENTS_KEY = 'fruit-merge-achievements';
             
-            // Preload fruit images - prefer SVG, fallback to PNG
+            // Preload fruit images - PNG only
             const fruitImages = {};
             const imageLoadPromises = [];
             
             FRUITS.forEach(fruit => {
                 const loadPromise = new Promise((resolve) => {
-                    // Try loading SVG first
-                    const svgImg = new Image();
-                    let isResolved = false;
+                    const img = new Image();
                     
-                    svgImg.onload = () => {
-                        if (!isResolved) {
-                            isResolved = true;
-                            fruitImages[fruit.level] = svgImg;
-                            fruit.imagePath = fruit.svgPath; // Store the successful path
-                            console.log(`Loaded SVG for fruit level ${fruit.level}: ${fruit.svgPath}`);
-                            resolve();
-                        }
+                    img.onload = () => {
+                        fruitImages[fruit.level] = img;
+                        console.log(`Loaded PNG for fruit level ${fruit.level}: ${fruit.imagePath}`);
+                        resolve();
                     };
                     
-                    svgImg.onerror = () => {
-                        if (!isResolved) {
-                            // SVG failed, fallback to PNG
-                            console.log(`SVG not found for fruit level ${fruit.level}, falling back to PNG`);
-                            const pngImg = new Image();
-                            
-                            pngImg.onload = () => {
-                                if (!isResolved) {
-                                    isResolved = true;
-                                    fruitImages[fruit.level] = pngImg;
-                                    fruit.imagePath = fruit.pngPath; // Store the successful path
-                                    resolve();
-                                }
-                            };
-                            
-                            pngImg.onerror = () => {
-                                if (!isResolved) {
-                                    isResolved = true;
-                                    console.error(`Failed to load both SVG and PNG for fruit level ${fruit.level}`);
-                                    // Use a fallback or empty image
-                                    fruitImages[fruit.level] = pngImg;
-                                    fruit.imagePath = fruit.pngPath;
-                                    resolve();
-                                }
-                            };
-                            
-                            pngImg.src = fruit.pngPath;
-                        }
+                    img.onerror = () => {
+                        console.error(`Failed to load PNG for fruit level ${fruit.level}: ${fruit.imagePath}`);
+                        // Store empty image to prevent errors
+                        fruitImages[fruit.level] = img;
+                        resolve();
                     };
                     
-                    svgImg.src = fruit.svgPath;
+                    img.src = fruit.imagePath;
                 });
                 
                 imageLoadPromises.push(loadPromise);
