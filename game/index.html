@@ -408,8 +408,9 @@
 
             // --- Game Configuration ---
             
-            const NATIVE_WIDTH = 400; // Our "design" width
-            let scaleFactor = 1; // Will be set in initGame
+            const NATIVE_WIDTH = 400; // Our "design" width (fixed game world width)
+            const NATIVE_HEIGHT = 600; // Our "design" height (fixed game world height, maintains 2:3 aspect ratio)
+            const scaleFactor = 1; // Game world always uses scale factor of 1 (fixed size)
 
             const FRUITS = [
                 // Use 'baseRadius' for all pixel values - all fruits are now circles
@@ -620,13 +621,18 @@
                 }
             }
 
-            // --- Game Dimensions (will be set in initGame) ---
+            // --- Game Dimensions ---
+            // Viewport dimensions (actual canvas/display size - will be set in initGame)
+            let viewportWidth = 0;
+            let viewportHeight = 0;
             let headerHeight = 0;
-            let boxWidth = 0;
-            let boxHeight = 0;
-            let gameOverLineY = 0;
-            let dropAreaY = 0;
-            let wallThickness = 40; 
+            
+            // Game world dimensions (fixed, physics works in this space)
+            const gameWorldWidth = NATIVE_WIDTH;
+            const gameWorldHeight = NATIVE_HEIGHT;
+            const gameOverLineY = gameWorldHeight * GAME_OVER_LINE_Y_PERCENT;
+            const dropAreaY = gameWorldHeight * DROP_AREA_Y_PERCENT;
+            const wallThickness = BASE_WALL_THICKNESS; 
 
             // --- Initialize Fruit Evolution Row ---
             function initFruitEvolutionRow() {
@@ -757,21 +763,17 @@
                 // Load achievements first
                 loadAchievements();
                 
+                // Set viewport dimensions (actual display size)
                 headerHeight = headerEl.clientHeight;
-                boxWidth = gameWrapper.clientWidth; 
-                boxHeight = gameWrapper.clientHeight - headerHeight; 
-                
-                scaleFactor = boxWidth / NATIVE_WIDTH;
-                wallThickness = BASE_WALL_THICKNESS * scaleFactor; 
+                viewportWidth = gameWrapper.clientWidth; 
+                viewportHeight = gameWrapper.clientHeight - headerHeight; 
                 
                 canvasWrapper.style.top = `${headerHeight}px`;
-                canvasWrapper.style.height = `${boxHeight}px`;
+                canvasWrapper.style.height = `${viewportHeight}px`;
                 confettiContainer.style.top = `${headerHeight}px`;
-                confettiContainer.style.height = `${boxHeight}px`;
+                confettiContainer.style.height = `${viewportHeight}px`;
 
-                gameOverLineY = boxHeight * GAME_OVER_LINE_Y_PERCENT;
-                dropAreaY = boxHeight * DROP_AREA_Y_PERCENT;
-                currentPreviewX = boxWidth / 2;
+                currentPreviewX = gameWorldWidth / 2;
 
                 isGameOver = false;
                 isDropping = false;
@@ -797,13 +799,19 @@
                     element: canvasWrapper, 
                     engine: engine,
                     options: {
-                        width: boxWidth,
-                        height: boxHeight,
+                        width: viewportWidth,
+                        height: viewportHeight,
                         wireframes: false,
                         /* Transparent background to show weave_background.png */
                         background: 'transparent'
                     }
                 });
+                
+                // Set up render bounds to show the full game world
+                render.bounds.min.x = 0;
+                render.bounds.min.y = 0;
+                render.bounds.max.x = gameWorldWidth;
+                render.bounds.max.y = gameWorldHeight;
 
                 runner = Runner.create();
                 World.clear(world, false);
@@ -820,19 +828,19 @@
                 };
 
                 // Calculate wall height - walls only extend from game over line (red line) to bottom
-                const wallHeight = boxHeight - gameOverLineY;
+                const wallHeight = gameWorldHeight - gameOverLineY;
                 const wallCenterY = gameOverLineY + wallHeight / 2;
                 
                 World.add(world, [
-                    Bodies.rectangle(boxWidth / 2, boxHeight - wallThickness / 2, boxWidth, wallThickness, { ...wallOptions, label: 'ground' }),
+                    Bodies.rectangle(gameWorldWidth / 2, gameWorldHeight - wallThickness / 2, gameWorldWidth, wallThickness, { ...wallOptions, label: 'ground' }),
                     Bodies.rectangle(wallThickness / 2, wallCenterY, wallThickness, wallHeight, { ...wallOptions, label: 'wall-left' }),
-                    Bodies.rectangle(boxWidth - wallThickness / 2, wallCenterY, wallThickness, wallHeight, { ...wallOptions, label: 'wall-right' })
+                    Bodies.rectangle(gameWorldWidth - wallThickness / 2, wallCenterY, wallThickness, wallHeight, { ...wallOptions, label: 'wall-right' })
                 ]);
 
                 const gameOverLine = Bodies.rectangle(
-                    boxWidth / 2,
+                    gameWorldWidth / 2,
                     gameOverLineY,
-                    boxWidth,
+                    gameWorldWidth,
                     2,
                     {
                         isStatic: true,
@@ -856,17 +864,17 @@
 
                 if (loadedState) {
                     console.log("Loading from saved state...");
-                    const loadedScaleFactor = loadedState.boxWidth ? (boxWidth / loadedState.boxWidth) : 1;
-
+                    // No need to scale positions anymore - game world is fixed size
+                    
                     loadedState.fruits.forEach(fruit => {
                         const body = createFruitBody(
-                            fruit.x * loadedScaleFactor, 
-                            fruit.y * loadedScaleFactor, 
+                            fruit.x, 
+                            fruit.y, 
                             fruit.level
                         );
                         
                         Body.setAngle(body, fruit.angle);
-                        Body.setVelocity(body, { x: fruit.velocityX * loadedScaleFactor, y: fruit.velocityY * loadedScaleFactor });
+                        Body.setVelocity(body, { x: fruit.velocityX, y: fruit.velocityY });
                         Body.setAngularVelocity(body, fruit.angularVelocity);
                         World.add(world, body);
                         
@@ -939,16 +947,16 @@
                                 
                                 // Draw floor texture aligned to the top edge
                                 context.fillRect(
-                                    -boxWidth / 2,
+                                    -gameWorldWidth / 2,
                                     -wallThickness / 2,
-                                    boxWidth,
+                                    gameWorldWidth,
                                     wallThickness
                                 );
                             }
                             context.restore();
                         } else if ((body.label === 'wall-left' || body.label === 'wall-right') && weaveSidesImg.complete && weaveEndsImg.complete) {
                             // Calculate actual wall height (from game over line to bottom)
-                            const wallHeight = boxHeight - gameOverLineY;
+                            const wallHeight = gameWorldHeight - gameOverLineY;
                             
                             // Sides: weave_sides.jpg (repeat-y)
                             const pattern = context.createPattern(weaveSidesImg, 'repeat-y');
@@ -992,12 +1000,12 @@
 
                         const fruitData = FRUITS[body.fruitLevel];
                         if (fruitData) {
-                            const scaledRadius = fruitData.baseRadius * scaleFactor;
+                            const radius = fruitData.baseRadius; // Use base radius (game world size)
                             const img = fruitImages[body.fruitLevel];
                             
                             if (img && img.complete) {
                                 // Calculate dimensions preserving aspect ratio
-                                const containerSize = scaledRadius * 2;
+                                const containerSize = radius * 2;
                                 const imgAspect = img.width / img.height;
                                 
                                 let drawWidth, drawHeight;
@@ -1033,6 +1041,27 @@
 
             // --- Fruit Creation ---
             
+            // Helper functions to convert between viewport and game world coordinates
+            function viewportToWorldX(viewportX) {
+                // Convert viewport X coordinate to game world X coordinate
+                return (viewportX / viewportWidth) * gameWorldWidth;
+            }
+            
+            function viewportToWorldY(viewportY) {
+                // Convert viewport Y coordinate to game world Y coordinate
+                return (viewportY / viewportHeight) * gameWorldHeight;
+            }
+            
+            function worldToViewportX(worldX) {
+                // Convert game world X coordinate to viewport X coordinate
+                return (worldX / gameWorldWidth) * viewportWidth;
+            }
+            
+            function worldToViewportY(worldY) {
+                // Convert game world Y coordinate to viewport Y coordinate
+                return (worldY / gameWorldHeight) * viewportHeight;
+            }
+            
             function createFruitBody(x, y, level, options = {}) {
                 const fruitData = FRUITS[level];
                 if (!fruitData) return null;
@@ -1052,17 +1081,20 @@
                     ...options
                 };
                 
-                const scaledRadius = fruitData.baseRadius * scaleFactor;
-                return Bodies.circle(x, y, scaledRadius, bodyOptions);
+                const radius = fruitData.baseRadius; // Use base radius (no scaling)
+                return Bodies.circle(x, y, radius, bodyOptions);
             }
 
             function spawnCurrentFruit() {
                 currentFruitLevel = nextFruitLevel;
                 const fruitData = FRUITS[currentFruitLevel];
-                const scaledRadius = fruitData.baseRadius * scaleFactor;
+                const radius = fruitData.baseRadius; // Game world radius
                 
-                previewFruitEl.style.width = `${scaledRadius * 2}px`;
-                previewFruitEl.style.height = `${scaledRadius * 2}px`;
+                // Convert game world radius to viewport size for preview
+                const viewportRadius = worldToViewportX(radius); // Use X scaling for consistent sizing
+                
+                previewFruitEl.style.width = `${viewportRadius * 2}px`;
+                previewFruitEl.style.height = `${viewportRadius * 2}px`;
                 // Make preview background transparent
                 previewFruitEl.style.backgroundColor = 'transparent';
                 
@@ -1074,7 +1106,9 @@
                 previewFruitEl.style.backgroundRepeat = 'no-repeat';
                 previewFruitEl.textContent = '';
                 
-                previewFruitEl.style.top = `${headerHeight + dropAreaY - scaledRadius}px`;
+                // Convert game world dropAreaY to viewport coordinates
+                const viewportDropAreaY = worldToViewportY(dropAreaY);
+                previewFruitEl.style.top = `${headerHeight + viewportDropAreaY - viewportRadius}px`;
                 
                 const clipPath = fruitData.clipPath || POLYGON_CLIP_PATHS['circle'];
                 previewFruitEl.style.clipPath = clipPath;
@@ -1098,23 +1132,31 @@
                 if (isGameOver) return;
 
                 const fruitData = FRUITS[currentFruitLevel];
-                const scaledRadius = fruitData.baseRadius * scaleFactor;
-                let x;
+                const radius = fruitData.baseRadius; // Game world radius
+                let worldX; // Position in game world coordinates
 
                 if (isInternalCall) {
-                    x = clientX; 
+                    // clientX is already in game world coordinates
+                    worldX = clientX; 
                 } else {
+                    // Convert viewport coordinates to game world coordinates
                     const rect = gameWrapper.getBoundingClientRect();
-                    x = clientX - rect.left; 
+                    const viewportX = clientX - rect.left;
+                    worldX = viewportToWorldX(viewportX);
                 }
                 
-                const constrainedX = Math.max(
-                    scaledRadius + wallThickness, // Use scaled values
-                    Math.min(boxWidth - scaledRadius - wallThickness, x) // Use scaled values
+                // Constrain in game world coordinates
+                const constrainedWorldX = Math.max(
+                    radius + wallThickness,
+                    Math.min(gameWorldWidth - radius - wallThickness, worldX)
                 );
                 
-                currentPreviewX = constrainedX;
-                previewFruitEl.style.transform = `translateX(${constrainedX - boxWidth / 2}px) translateX(-50%)`;
+                currentPreviewX = constrainedWorldX; // Store in game world coordinates
+                
+                // Convert to viewport coordinates for display
+                const viewportX = worldToViewportX(constrainedWorldX);
+                const viewportCenterX = viewportWidth / 2;
+                previewFruitEl.style.transform = `translateX(${viewportX - viewportCenterX}px) translateX(-50%)`;
             }
 
             function dropFruit() {
@@ -1188,7 +1230,11 @@
             }
 
             // --- Confetti Effect ---
-            function createConfetti(x, y, color1, color2) {
+            function createConfetti(worldX, worldY, color1, color2) {
+                // Convert game world coordinates to viewport coordinates
+                const viewportX = worldToViewportX(worldX);
+                const viewportY = worldToViewportY(worldY);
+                
                 const numPieces = 25;
                 for (let i = 0; i < numPieces; i++) {
                     const piece = document.createElement('div');
@@ -1197,22 +1243,23 @@
                     const randomColor = Math.random() < 0.5 ? color1 : color2;
                     piece.style.backgroundColor = randomColor;
                     
-                    const pieceSize = 10 * scaleFactor;
+                    // Fixed piece size in viewport (not scaled with game world)
+                    const pieceSize = 10;
                     piece.style.width = `${pieceSize}px`;
                     piece.style.height = `${pieceSize}px`;
 
-                    piece.style.left = `${x}px`;
-                    piece.style.top = `${y}px`;
+                    piece.style.left = `${viewportX}px`;
+                    piece.style.top = `${viewportY}px`;
                     
                     confettiContainer.appendChild(piece);
 
                     const angle = Math.random() * Math.PI * 2; 
-                    const distance = (Math.random() * 70 + 40) * scaleFactor; 
-                    const finalX = x + Math.cos(angle) * distance;
-                    const finalY = y + Math.sin(angle) * distance;
+                    const distance = Math.random() * 70 + 40;
+                    const finalX = viewportX + Math.cos(angle) * distance;
+                    const finalY = viewportY + Math.sin(angle) * distance;
 
                     setTimeout(() => {
-                        piece.style.transform = `translate(${finalX - x}px, ${finalY - y}px) scale(0)`;
+                        piece.style.transform = `translate(${finalX - viewportX}px, ${finalY - viewportY}px) scale(0)`;
                         piece.style.opacity = '0';
                     }, 10); 
 
@@ -1243,7 +1290,7 @@
                     score: score,
                     currentFruitLevel: currentFruitLevel,
                     nextFruitLevel: nextFruitLevel,
-                    boxWidth: boxWidth, // Save boxWidth for scaling on load
+                    // No need to save boxWidth anymore - game world is fixed size
                     isMusicEnabled: isMusicEnabled, // Save music preference
                     areSoundsEnabled: areSoundsEnabled, // Save sounds preference
                     timestamp: Date.now() // Save timestamp for auto-resume feature
@@ -1597,152 +1644,39 @@
 
             // --- Handle Window Resize ---
             function handleResize(newWidth, newHeight) {
-                if (!newWidth || !newHeight || newWidth === boxWidth) {
+                if (!newWidth || !newHeight || newWidth === viewportWidth) {
                     return;
                 }
                 
-                // Calculate the scale factor
-                const oldWidth = boxWidth;
-                const oldHeight = boxHeight;
-                const resizeScale = newWidth / oldWidth;
-                
-                // Update dimensions
+                // Update viewport dimensions (actual display size)
                 headerHeight = headerEl.clientHeight;
-                boxWidth = newWidth;
-                boxHeight = newHeight - headerHeight;
-                
-                scaleFactor = boxWidth / NATIVE_WIDTH;
-                wallThickness = BASE_WALL_THICKNESS * scaleFactor;
+                viewportWidth = newWidth;
+                viewportHeight = newHeight - headerHeight;
                 
                 canvasWrapper.style.top = `${headerHeight}px`;
-                canvasWrapper.style.height = `${boxHeight}px`;
+                canvasWrapper.style.height = `${viewportHeight}px`;
                 confettiContainer.style.top = `${headerHeight}px`;
-                confettiContainer.style.height = `${boxHeight}px`;
-                
-                gameOverLineY = boxHeight * GAME_OVER_LINE_Y_PERCENT;
-                dropAreaY = boxHeight * DROP_AREA_Y_PERCENT;
+                confettiContainer.style.height = `${viewportHeight}px`;
                 
                 // Update the canvas dimensions
                 if (render && render.canvas) {
-                    render.canvas.width = boxWidth;
-                    render.canvas.height = boxHeight;
-                    render.options.width = boxWidth;
-                    render.options.height = boxHeight;
-                    render.bounds.max.x = boxWidth;
-                    render.bounds.max.y = boxHeight;
+                    render.canvas.width = viewportWidth;
+                    render.canvas.height = viewportHeight;
+                    render.options.width = viewportWidth;
+                    render.options.height = viewportHeight;
+                    // Keep bounds fixed to game world size
+                    render.bounds.min.x = 0;
+                    render.bounds.min.y = 0;
+                    render.bounds.max.x = gameWorldWidth;
+                    render.bounds.max.y = gameWorldHeight;
                 }
                 
-                // Scale all existing bodies
-                if (world) {
-                    const allBodies = Composite.allBodies(world);
-                    const staticBodiesToRemove = [];
-                    const fruitBodies = [];
-                    
-                    // Collect bodies and scale dynamic bodies
-                    allBodies.forEach(body => {
-                        if (body.label === 'fruit') {
-                            fruitBodies.push(body);
-                            
-                            // Scale position
-                            Body.setPosition(body, {
-                                x: body.position.x * resizeScale,
-                                y: body.position.y * resizeScale
-                            });
-                            
-                            // Scale velocity
-                            Body.setVelocity(body, {
-                                x: body.velocity.x * resizeScale,
-                                y: body.velocity.y * resizeScale
-                            });
-                            
-                            // Scale the fruit body
-                            const fruitData = FRUITS[body.fruitLevel];
-                            const newScaledRadius = fruitData.baseRadius * scaleFactor;
-                            const oldScaledRadius = fruitData.baseRadius * (oldWidth / NATIVE_WIDTH);
-                            const scaleRatio = newScaledRadius / oldScaledRadius;
-                            
-                            Body.scale(body, scaleRatio, scaleRatio);
-                        } else if (body.isStatic) {
-                            // Mark static bodies for removal
-                            staticBodiesToRemove.push(body);
-                        }
-                    });
-                    
-                    // Remove old static bodies
-                    staticBodiesToRemove.forEach(body => {
-                        World.remove(world, body);
-                    });
-                    
-                    // Recreate static bodies with new dimensions
-                    const wallOptions = {
-                        isStatic: true,
-                        restitution: 0.1,
-                        friction: 0.2,
-                        render: { 
-                            fillStyle: 'transparent',
-                            strokeStyle: 'transparent',
-                            lineWidth: 0
-                        }
-                    };
-                    
-                    // Only add ground wall if game is not over
-                    if (!isGameOver) {
-                        World.add(world, Bodies.rectangle(
-                            boxWidth / 2, 
-                            boxHeight - wallThickness / 2, 
-                            boxWidth, 
-                            wallThickness, 
-                            { ...wallOptions, label: 'ground' }
-                        ));
-                    }
-                    
-                    // Calculate wall height - from bottom to game over line
-                    const wallHeight = boxHeight - gameOverLineY;
-                    const wallCenterY = gameOverLineY + wallHeight / 2;
-                    
-                    World.add(world, [
-                        Bodies.rectangle(
-                            wallThickness / 2, 
-                            wallCenterY, 
-                            wallThickness, 
-                            wallHeight, 
-                            { ...wallOptions, label: 'wall-left' }
-                        ),
-                        Bodies.rectangle(
-                            boxWidth - wallThickness / 2, 
-                            wallCenterY, 
-                            wallThickness, 
-                            wallHeight, 
-                            { ...wallOptions, label: 'wall-right' }
-                        )
-                    ]);
-                    
-                    // Recreate game over line
-                    const gameOverLine = Bodies.rectangle(
-                        boxWidth / 2,
-                        gameOverLineY,
-                        boxWidth,
-                        2,
-                        {
-                            isStatic: true,
-                            isSensor: true,
-                            label: 'gameOverLine',
-                            render: { fillStyle: '#FF0000', opacity: 0.5 }
-                        }
-                    );
-                    World.add(world, gameOverLine);
-                }
-                
-                // Update preview fruit position and size
-                currentPreviewX = currentPreviewX * resizeScale;
+                // Update preview fruit position and size (no need to scale position - it's in game world coords)
                 if (!isGameOver && !isDropping) {
                     spawnCurrentFruit();
                 }
                 
-                // Save the updated game state
-                if (!isGameOver && world && Composite.allBodies(world).length > 0) {
-                    saveGameState();
-                }
+                // No need to save game state on resize - game world is unchanged
             }
             
             function setupResizeObserver() {
