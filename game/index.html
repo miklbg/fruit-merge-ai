@@ -104,10 +104,8 @@
             position: absolute;
             bottom: 0;
             z-index: 1;
-            background-image: url('assets/weave_background.png');
-            background-size: 200px 200px;
-            background-position: center;
-            background-repeat: repeat;
+            /* Sky blue gradient background */
+            background: linear-gradient(to bottom, #87CEEB 0%, #B0D9F5 100%);
         }
         
         canvas {
@@ -250,6 +248,34 @@
             filter: blur(4px) grayscale(0.5);
             opacity: 0.4;
         }
+        
+        #booster-indicator {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            z-index: 25;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        #booster-indicator.disabled {
+            opacity: 0.3;
+            filter: grayscale(1);
+        }
+        
+        #booster-indicator svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
     </style>
 </head>
 <!-- --- FIX: Bright body classes --- -->
@@ -319,6 +345,13 @@
                         <img id="next-fruit-img" src="" alt="Next fruit" class="max-h-9 max-w-9 object-contain" style="width: 24px; height: 24px;">
                     </div>
                 </div>
+            </div>
+            
+            <!-- Booster Indicator -->
+            <div id="booster-indicator" class="disabled">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/>
+                </svg>
             </div>
             
             <div id="preview-fruit"></div>
@@ -393,6 +426,7 @@
             const restartConfirmYes = document.getElementById('restart-confirm-yes');
             const restartConfirmNo = document.getElementById('restart-confirm-no');
             const fruitEvolutionRow = document.getElementById('fruit-evolution-row');
+            const boosterIndicator = document.getElementById('booster-indicator');
 
             // --- Matter.js modules ---
             const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Common } = Matter;
@@ -508,6 +542,19 @@
             const SPEED_BOOST_WINDOW = 200; // Time window to boost dropped fruit speed (ms)
             const NORMAL_DROP_VELOCITY = 10; // Normal drop velocity
             const BOOSTED_DROP_VELOCITY = 50; // Boosted drop velocity (3x normal)
+            
+            // --- Booster Cooldown State ---
+            let boosterCooldownCount = 0; // Number of drops remaining in cooldown
+            const BOOSTER_COOLDOWN_DROPS = 5; // Number of drops to disable booster after use
+            
+            // --- Update Booster Indicator ---
+            function updateBoosterIndicator() {
+                if (boosterCooldownCount > 0) {
+                    boosterIndicator.classList.add('disabled');
+                } else {
+                    boosterIndicator.classList.remove('disabled');
+                }
+            }
 
             // --- Audio System ---
             // Sound effects are generated programmatically using the Web Audio API.
@@ -905,6 +952,8 @@
                 lastDroppedFruit = null; // Reset last dropped fruit reference
                 saveCounter = 0;
                 currentGameMaxFruit = -1; // Reset current game max on new game
+                boosterCooldownCount = 0; // Reset booster cooldown
+                updateBoosterIndicator(); // Update indicator display
                 
                 // Reset warning state
                 isWarningActive = false;
@@ -1024,6 +1073,12 @@
                     }
                     if (loadedState.areSoundsEnabled !== undefined) {
                         areSoundsEnabled = loadedState.areSoundsEnabled;
+                    }
+                    
+                    // Restore booster cooldown state
+                    if (loadedState.boosterCooldownCount !== undefined) {
+                        boosterCooldownCount = loadedState.boosterCooldownCount;
+                        updateBoosterIndicator();
                     }
 
                     // Restore both current and next fruit levels from saved state
@@ -1384,6 +1439,12 @@
                 isDropping = true;
                 lastDropTime = currentTime; // Record the drop time
                 
+                // Decrement booster cooldown counter
+                if (boosterCooldownCount > 0) {
+                    boosterCooldownCount--;
+                    updateBoosterIndicator();
+                }
+                
                 const droppedFruit = createFruitBody(
                     currentPreviewX, 
                     dropAreaY,
@@ -1499,6 +1560,7 @@
                     // No need to save boxWidth anymore - game world is fixed size
                     isMusicEnabled: isMusicEnabled, // Save music preference
                     areSoundsEnabled: areSoundsEnabled, // Save sounds preference
+                    boosterCooldownCount: boosterCooldownCount, // Save booster cooldown state
                     timestamp: Date.now() // Save timestamp for auto-resume feature
                 };
 
@@ -1713,8 +1775,11 @@
                 const currentTime = Date.now();
                 const timeSinceLastDrop = currentTime - lastDropTime;
                 
-                // Check if we're in the speed boost window (within 200ms of cooldown)
-                if (timeSinceLastDrop < SPEED_BOOST_WINDOW && lastDroppedFruit && world.bodies.includes(lastDroppedFruit)) {
+                // Check if we're in the speed boost window (within 200ms of cooldown) and booster is available
+                if (timeSinceLastDrop < SPEED_BOOST_WINDOW && 
+                    lastDroppedFruit && 
+                    world.bodies.includes(lastDroppedFruit) &&
+                    boosterCooldownCount === 0) {
                     // Boost the most recently dropped fruit's speed to 3x
                     Body.setVelocity(lastDroppedFruit, { 
                         x: lastDroppedFruit.velocity.x, 
@@ -1722,6 +1787,9 @@
                     });
                     // Clear the reference so we don't boost again
                     lastDroppedFruit = null;
+                    // Activate cooldown for next 5 drops
+                    boosterCooldownCount = BOOSTER_COOLDOWN_DROPS;
+                    updateBoosterIndicator();
                 } else {
                     // Normal drop
                     dropFruit(); 
