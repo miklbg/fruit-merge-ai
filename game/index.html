@@ -1397,7 +1397,10 @@
                 if (collisionTimeout) clearTimeout(collisionTimeout);
                 collisionTimeout = setTimeout(() => {
                     if (!isGameOver && droppedFruit && world.bodies.includes(droppedFruit)) {
-                        if (Matter.Collision.collides(droppedFruit, world.bodies.find(b => b.label === 'gameOverLine'))) {
+                        // Only trigger game over if the fruit's CENTER is above the red line
+                        const isCenterAboveLine = droppedFruit.position.y < gameOverLineY;
+                        const isStationary = Math.abs(droppedFruit.velocity.y) < 0.5 && Math.abs(droppedFruit.velocity.x) < 0.5;
+                        if (isCenterAboveLine && isStationary) {
                             triggerGameOver();
                         }
                     }
@@ -1583,8 +1586,8 @@
                         const fruitsInWarningZone = Composite.allBodies(world).filter(body => {
                             if (body.label !== 'fruit') return false;
                             
-                            // Check if fruit center is in warning zone
-                            const isInWarningZone = body.position.y >= warningZoneTop && body.position.y <= gameOverLineY;
+                            // Check if fruit center is in warning zone (above the red line but close to it)
+                            const isInWarningZone = body.position.y >= warningZoneTop && body.position.y < gameOverLineY;
                             
                             // Only count fruits that are relatively stationary
                             const isRelativelyStationary = Math.abs(body.velocity.y) < 2.0;
