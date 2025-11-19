@@ -501,6 +501,12 @@
             let warningLineThickness = 2; // Current thickness of the warning line
             let warningAnimationFrame = 0; // Animation frame counter
             let lastWarningSound = 0; // Timestamp of last warning sound
+            
+            // --- Double-Click Detection State ---
+            let lastDroppedFruit = null; // Track the most recently dropped fruit for speed boost
+            const SPEED_BOOST_WINDOW = 200; // Time window to boost dropped fruit speed (ms)
+            const NORMAL_DROP_VELOCITY = 10; // Normal drop velocity
+            const BOOSTED_DROP_VELOCITY = 30; // Boosted drop velocity (3x normal)
 
             // --- Audio System ---
             // Sound effects are generated programmatically using the Web Audio API.
@@ -895,6 +901,7 @@
                 isGameOver = false;
                 isDropping = false;
                 lastDropTime = 0; // Reset drop time on new game
+                lastDroppedFruit = null; // Reset last dropped fruit reference
                 saveCounter = 0;
                 currentGameMaxFruit = -1; // Reset current game max on new game
                 
@@ -1372,7 +1379,10 @@
                 }
                 
                 // Set initial downward velocity after body creation
-                Body.setVelocity(droppedFruit, { x: 0, y: 10 });
+                Body.setVelocity(droppedFruit, { x: 0, y: NORMAL_DROP_VELOCITY });
+                
+                // Track this fruit for potential speed boost
+                lastDroppedFruit = droppedFruit;
                 
                 // Update evolution row when a fruit is dropped
                 updateEvolutionRow(currentFruitLevel);
@@ -1679,7 +1689,23 @@
             function handlePointerUp(e) { 
                 if (isModalVisible()) return;
                 e.preventDefault(); 
-                dropFruit(); 
+                
+                const currentTime = Date.now();
+                const timeSinceLastDrop = currentTime - lastDropTime;
+                
+                // Check if we're in the speed boost window (within 200ms of cooldown)
+                if (timeSinceLastDrop < SPEED_BOOST_WINDOW && lastDroppedFruit && world.bodies.includes(lastDroppedFruit)) {
+                    // Boost the most recently dropped fruit's speed to 3x
+                    Body.setVelocity(lastDroppedFruit, { 
+                        x: lastDroppedFruit.velocity.x, 
+                        y: BOOSTED_DROP_VELOCITY 
+                    });
+                    // Clear the reference so we don't boost again
+                    lastDroppedFruit = null;
+                } else {
+                    // Normal drop
+                    dropFruit(); 
+                }
             }
             
             // --- Prevent toolbar pointer events from bubbling ---
