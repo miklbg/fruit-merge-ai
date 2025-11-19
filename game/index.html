@@ -39,8 +39,11 @@
             flex-direction: column;
             align-items: center;
             gap: 0;
-            /* Use either max-width or max-height to constrain */
-            width: min(100vw, 100vh * 2 / 3);
+            /* Limit width to maintain reasonable aspect ratio for 2:3 game area plus evolution row */
+            /* In landscape, this ensures game doesn't get too wide */
+            width: 100%;
+            max-width: min(100vw, calc(100vh * 2 / 3));
+            max-width: min(100vw, calc(100dvh * 2 / 3));
             /* Ensure the container fits within viewport height - use 100dvh for better mobile support */
             max-height: 100vh;
             max-height: 100dvh; /* Dynamic viewport height for mobile browsers */
@@ -51,14 +54,11 @@
         #game-wrapper {
             display: flex;
             flex-direction: column;
-            /* --- FIX: Enforce 2:3 aspect ratio --- */
-            aspect-ratio: 2 / 3;
-            width: 100%;
-            /* Flex shrink to fit within container */
-            flex: 1 1 auto;
-            min-height: 0;
             /* --- FIX: Bright wrapper background --- */
             background-color: #fff7ed; /* bg-orange-50 */
+            width: 100%;
+            flex: 1 1 auto;
+            min-height: 0;
             overflow: hidden;
             position: relative;
             
@@ -97,8 +97,6 @@
 
         #game-canvas-wrapper {
             position: absolute;
-            left: 0;
-            right: 0;
             bottom: 0;
             z-index: 1;
             background-image: url('assets/weave_background.png');
@@ -184,7 +182,7 @@
 
         #confetti-container {
             position: absolute;
-            inset: 0;
+            bottom: 0;
             pointer-events: none;
             overflow: hidden;
             z-index: 15; 
@@ -772,15 +770,34 @@
                 // Load achievements first
                 loadAchievements();
                 
-                // Set viewport dimensions (actual display size)
+                // Calculate viewport dimensions to maintain 2:3 aspect ratio (matching game world)
                 headerHeight = headerEl.clientHeight;
-                viewportWidth = gameWrapper.clientWidth; 
-                viewportHeight = gameWrapper.clientHeight - headerHeight; 
+                const wrapperWidth = gameWrapper.clientWidth;
+                const wrapperHeight = gameWrapper.clientHeight;
+                const availableHeight = wrapperHeight - headerHeight;
+                
+                // Ensure viewport maintains 2:3 aspect ratio (same as game world 400:600)
+                // Calculate based on available space while maintaining aspect ratio
+                const aspectRatio = gameWorldWidth / gameWorldHeight; // 2/3
+                
+                if (wrapperWidth / availableHeight > aspectRatio) {
+                    // Width is the limiting factor
+                    viewportWidth = Math.floor(availableHeight * aspectRatio);
+                    viewportHeight = availableHeight;
+                } else {
+                    // Height is the limiting factor
+                    viewportWidth = wrapperWidth;
+                    viewportHeight = Math.floor(wrapperWidth / aspectRatio);
+                }
                 
                 canvasWrapper.style.top = `${headerHeight}px`;
                 canvasWrapper.style.height = `${viewportHeight}px`;
+                canvasWrapper.style.width = `${viewportWidth}px`;
+                canvasWrapper.style.left = `${(wrapperWidth - viewportWidth) / 2}px`; // Center if width is limited
                 confettiContainer.style.top = `${headerHeight}px`;
                 confettiContainer.style.height = `${viewportHeight}px`;
+                confettiContainer.style.width = `${viewportWidth}px`;
+                confettiContainer.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
 
                 currentPreviewX = gameWorldWidth / 2;
 
@@ -1687,15 +1704,33 @@
                     return;
                 }
                 
-                // Update viewport dimensions (actual display size)
+                // Calculate viewport dimensions to maintain 2:3 aspect ratio (matching game world)
                 headerHeight = headerEl.clientHeight;
-                viewportWidth = newWidth;
-                viewportHeight = newHeight - headerHeight;
+                const wrapperWidth = newWidth;
+                const wrapperHeight = newHeight;
+                const availableHeight = wrapperHeight - headerHeight;
+                
+                // Ensure viewport maintains 2:3 aspect ratio (same as game world 400:600)
+                const aspectRatio = gameWorldWidth / gameWorldHeight; // 2/3
+                
+                if (wrapperWidth / availableHeight > aspectRatio) {
+                    // Width is the limiting factor
+                    viewportWidth = Math.floor(availableHeight * aspectRatio);
+                    viewportHeight = availableHeight;
+                } else {
+                    // Height is the limiting factor
+                    viewportWidth = wrapperWidth;
+                    viewportHeight = Math.floor(wrapperWidth / aspectRatio);
+                }
                 
                 canvasWrapper.style.top = `${headerHeight}px`;
                 canvasWrapper.style.height = `${viewportHeight}px`;
+                canvasWrapper.style.width = `${viewportWidth}px`;
+                canvasWrapper.style.left = `${(wrapperWidth - viewportWidth) / 2}px`; // Center if width is limited
                 confettiContainer.style.top = `${headerHeight}px`;
                 confettiContainer.style.height = `${viewportHeight}px`;
+                confettiContainer.style.width = `${viewportWidth}px`;
+                confettiContainer.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
                 
                 // Update the canvas dimensions
                 if (render && render.canvas) {
