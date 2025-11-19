@@ -105,7 +105,7 @@
             bottom: 0;
             z-index: 1;
             background-image: url('assets/weave_background.png');
-            background-size: 600px 600px; /* Scale background pattern 3x for higher resolution */
+            background-size: 200px 200px;
             background-position: center;
             background-repeat: repeat;
         }
@@ -1082,7 +1082,7 @@
                                 matrix.translateSelf(body.position.x - gameWorldWidth / 2, body.position.y - wallThickness / 2);
                                 pattern.setTransform(matrix);
                                 
-                                context.globalAlpha = 0.9; // Apply transparency
+                                //context.globalAlpha = 0.9; // Apply transparency
                                 context.fillStyle = pattern;
                                 
                                 // Draw floor texture at the top edge of the wall body
@@ -1111,7 +1111,7 @@
                                 matrix.scaleSelf(scaleX, 1); // Scale horizontally to fit wall width
                                 pattern.setTransform(matrix);
                                 
-                                context.globalAlpha = 0.9; // Apply transparency
+                                //context.globalAlpha = 0.9; // Apply transparency
                                 context.fillStyle = pattern;
                                 
                                 // Draw the main side wall (only up to the red line)
@@ -1126,7 +1126,7 @@
                             
                             // Top of sides: weave_ends.png (drawn at the top of each side wall, at the red line)
                             context.save();
-                            context.globalAlpha = 0.9; // Apply transparency
+                            //context.globalAlpha = 0.9; // Apply transparency
                             // Draw the end cap at the top of the side wall
                             const endHeight = weaveEndsImg.height * (wallThickness / weaveEndsImg.width); // Scale to match wall width
                             context.drawImage(
