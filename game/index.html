@@ -446,11 +446,11 @@
             
             // Preload wall texture images
             const weaveBottomImg = new Image();
-            weaveBottomImg.src = 'assets/weave_bottom.jpg';
+            weaveBottomImg.src = 'assets/weave_bottom.png';
             const weaveSidesImg = new Image();
-            weaveSidesImg.src = 'assets/weave_sides.jpg';
+            weaveSidesImg.src = 'assets/weave_sides.png';
             const weaveEndsImg = new Image();
-            weaveEndsImg.src = 'assets/weave_ends.jpg'; 
+            weaveEndsImg.src = 'assets/weave_ends.png'; 
 
             // --- Game State ---
             let engine, render, runner, world;
@@ -935,7 +935,7 @@
                     // First, render wall textures
                     bodies.forEach(body => {
                         if (body.label === 'ground' && weaveBottomImg.complete) {
-                            // Floor: weave_bottom.jpg (repeat-x)
+                            // Floor: weave_bottom.png (repeat-x)
                             context.save();
                             context.translate(body.position.x, body.position.y);
                             
@@ -958,7 +958,7 @@
                             // Calculate actual wall height (from game over line to bottom)
                             const wallHeight = gameWorldHeight - gameOverLineY;
                             
-                            // Sides: weave_sides.jpg (repeat-y)
+                            // Sides: weave_sides.png (repeat-y)
                             const pattern = context.createPattern(weaveSidesImg, 'repeat-y');
                             if (pattern) {
                                 context.save();
@@ -976,7 +976,7 @@
                                 context.restore();
                             }
                             
-                            // Top of sides: weave_ends.jpg (drawn at the top of each side wall, at the red line)
+                            // Top of sides: weave_ends.png (drawn at the top of each side wall, at the red line)
                             context.save();
                             context.translate(body.position.x, body.position.y);
                             //context.rotate(body.angle);
