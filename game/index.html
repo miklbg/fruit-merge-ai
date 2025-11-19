@@ -1232,7 +1232,8 @@
                     nextFruitLevel: nextFruitLevel,
                     boxWidth: boxWidth, // Save boxWidth for scaling on load
                     isMusicEnabled: isMusicEnabled, // Save music preference
-                    areSoundsEnabled: areSoundsEnabled // Save sounds preference
+                    areSoundsEnabled: areSoundsEnabled, // Save sounds preference
+                    timestamp: Date.now() // Save timestamp for auto-resume feature
                 };
 
                 localStorage.setItem(GAME_STATE_KEY, JSON.stringify(gameState));
@@ -1782,8 +1783,28 @@
             
             // --- Setup Pause Modal ---
             function setupPauseModal() {
+                // Check if saved game exists and if it's recent (less than 20 seconds old)
+                const savedStateString = localStorage.getItem(GAME_STATE_KEY);
+                let shouldAutoResume = false;
+                
+                if (savedStateString) {
+                    try {
+                        const savedState = JSON.parse(savedStateString);
+                        const currentTime = Date.now();
+                        const savedTimestamp = savedState.timestamp || 0;
+                        const timeDifference = currentTime - savedTimestamp;
+                        
+                        // Auto-resume if saved data is less than 20 seconds old (20000 milliseconds)
+                        if (timeDifference < 20000 && timeDifference >= 0) {
+                            shouldAutoResume = true;
+                        }
+                    } catch (e) {
+                        console.error("Could not parse saved state for auto-resume check:", e);
+                    }
+                }
+                
                 // Set initial button text based on saved game
-                if (localStorage.getItem(GAME_STATE_KEY)) {
+                if (savedStateString) {
                     resumeButton.textContent = 'Resume';
                     restartMenuButton.classList.remove('hidden');
                 } else {
@@ -1795,8 +1816,26 @@
                 musicStatus.textContent = isMusicEnabled ? 'On' : 'Off';
                 soundsStatus.textContent = areSoundsEnabled ? 'On' : 'Off';
                 
-                // Modal is visible by default on first load
-                // The togglePauseMenu function handles showing/hiding and music control
+                // Auto-resume if saved data is recent
+                if (shouldAutoResume) {
+                    console.log("Auto-resuming game (saved data is less than 20 seconds old)");
+                    // Hide the pause modal
+                    pauseModal.classList.add('hidden');
+                    
+                    // Initialize background music on auto-resume if not already done
+                    if (!bgmController) {
+                        initBackgroundMusic();
+                    }
+                    
+                    // Start music if enabled
+                    if (isMusicEnabled && !isGameOver) {
+                        isMusicPaused = false;
+                        startBackgroundMusic();
+                    }
+                } else {
+                    // Modal is visible by default on first load
+                    // The togglePauseMenu function handles showing/hiding and music control
+                }
             }
         
         }; // End of window.onload
