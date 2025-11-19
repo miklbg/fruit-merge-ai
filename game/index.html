@@ -819,10 +819,14 @@
                     }
                 };
 
+                // Calculate wall height - from bottom to game over line
+                const wallHeight = boxHeight - gameOverLineY;
+                const wallCenterY = gameOverLineY + wallHeight / 2;
+                
                 World.add(world, [
                     Bodies.rectangle(boxWidth / 2, boxHeight - wallThickness / 2, boxWidth, wallThickness, { ...wallOptions, label: 'ground' }),
-                    Bodies.rectangle(wallThickness / 2, boxHeight / 2, wallThickness, boxHeight, { ...wallOptions, label: 'wall-left' }),
-                    Bodies.rectangle(boxWidth - wallThickness / 2, boxHeight / 2, wallThickness, boxHeight, { ...wallOptions, label: 'wall-right' })
+                    Bodies.rectangle(wallThickness / 2, wallCenterY, wallThickness, wallHeight, { ...wallOptions, label: 'wall-left' }),
+                    Bodies.rectangle(boxWidth - wallThickness / 2, wallCenterY, wallThickness, wallHeight, { ...wallOptions, label: 'wall-right' })
                 ]);
 
                 const gameOverLine = Bodies.rectangle(
@@ -939,6 +943,9 @@
                                 context.restore();
                             }
                         } else if ((body.label === 'wall-left' || body.label === 'wall-right') && weaveSidesImg.complete && weaveEndsImg.complete) {
+                            // Calculate actual wall height (from game over line to bottom)
+                            const wallHeight = boxHeight - gameOverLineY;
+                            
                             // Sides: weave_sides.jpg (repeat-y)
                             const pattern = context.createPattern(weaveSidesImg, 'repeat-y');
                             if (pattern) {
@@ -946,17 +953,17 @@
                                 context.translate(body.position.x, body.position.y);
                                 //context.rotate(body.angle);
                                 context.fillStyle = pattern;
-                                // Draw the main side wall
+                                // Draw the main side wall (only up to the red line)
                                 context.fillRect(
                                     -wallThickness / 2,
-                                    -boxHeight / 2,
+                                    -wallHeight / 2,
                                     wallThickness,
-                                    boxHeight
+                                    wallHeight
                                 );
                                 context.restore();
                             }
                             
-                            // Top of sides: weave_ends.jpg (drawn at the top of each side wall)
+                            // Top of sides: weave_ends.jpg (drawn at the top of each side wall, at the red line)
                             context.save();
                             context.translate(body.position.x, body.position.y);
                             //context.rotate(body.angle);
@@ -965,7 +972,7 @@
                             context.drawImage(
                                 weaveEndsImg,
                                 -wallThickness / 2,
-                                -boxHeight / 2,
+                                -wallHeight / 2,
                                 wallThickness,
                                 endHeight
                             );
@@ -1683,19 +1690,23 @@
                         ));
                     }
                     
+                    // Calculate wall height - from bottom to game over line
+                    const wallHeight = boxHeight - gameOverLineY;
+                    const wallCenterY = gameOverLineY + wallHeight / 2;
+                    
                     World.add(world, [
                         Bodies.rectangle(
                             wallThickness / 2, 
-                            boxHeight / 2, 
+                            wallCenterY, 
                             wallThickness, 
-                            boxHeight, 
+                            wallHeight, 
                             { ...wallOptions, label: 'wall-left' }
                         ),
                         Bodies.rectangle(
                             boxWidth - wallThickness / 2, 
-                            boxHeight / 2, 
+                            wallCenterY, 
                             wallThickness, 
-                            boxHeight, 
+                            wallHeight, 
                             { ...wallOptions, label: 'wall-right' }
                         )
                     ]);
