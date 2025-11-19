@@ -1355,7 +1355,8 @@
                 const droppedFruit = createFruitBody(
                     currentPreviewX, 
                     dropAreaY,
-                    currentFruitLevel
+                    currentFruitLevel,
+                    { velocity: { x: 0, y: 2 } } // Add small initial downward velocity
                 );
                 
                 if (!droppedFruit) {
