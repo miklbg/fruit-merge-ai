@@ -46,7 +46,7 @@ Background music is sourced from Pixabay:
 ### Audio Features
 - **Drop Sound**: A descending tone played when fruits are released
 - **Merge Sound**: A cheerful ascending chime played when fruits merge
-- **Game Over Sound**: A descending sawtooth wave that plays when the game ends
+- **Game Over Sound**: A multi-note descending melody (E4→C4→A3→F3) that plays when the game ends
 - **Background Music**: A continuous looping melody during gameplay that fades out when the game is paused or ended
   - **Volume Control**: Uses Web Audio API GainNode for reliable, cross-browser volume control (default ~0.25 linear, approximately -12dB)
   - **iOS Safari Support**: Automatically unlocks AudioContext on first user gesture to satisfy iOS Safari autoplay restrictions
