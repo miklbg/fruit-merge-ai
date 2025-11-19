@@ -501,6 +501,11 @@
             let warningLineThickness = 2; // Current thickness of the warning line
             let warningAnimationFrame = 0; // Animation frame counter
             let lastWarningSound = 0; // Timestamp of last warning sound
+            
+            // --- Double-Click Detection State ---
+            let lastClickTime = 0; // Timestamp of last click
+            let isDoubleClick = false; // Track if current action is a double-click
+            const DOUBLE_CLICK_THRESHOLD = 300; // Time window for double-click detection in ms
 
             // --- Audio System ---
             // Sound effects are generated programmatically using the Web Audio API.
@@ -895,6 +900,8 @@
                 isGameOver = false;
                 isDropping = false;
                 lastDropTime = 0; // Reset drop time on new game
+                lastClickTime = 0; // Reset click time on new game
+                isDoubleClick = false; // Reset double-click state
                 saveCounter = 0;
                 currentGameMaxFruit = -1; // Reset current game max on new game
                 
@@ -1372,7 +1379,9 @@
                 }
                 
                 // Set initial downward velocity after body creation
-                Body.setVelocity(droppedFruit, { x: 0, y: 10 });
+                // Use 3x speed (30) if double-click, otherwise normal speed (10)
+                const dropSpeed = isDoubleClick ? 30 : 10;
+                Body.setVelocity(droppedFruit, { x: 0, y: dropSpeed });
                 
                 // Update evolution row when a fruit is dropped
                 updateEvolutionRow(currentFruitLevel);
@@ -1679,6 +1688,20 @@
             function handlePointerUp(e) { 
                 if (isModalVisible()) return;
                 e.preventDefault(); 
+                
+                // Detect double-click/tap
+                const currentTime = Date.now();
+                const timeSinceLastClick = currentTime - lastClickTime;
+                
+                if (timeSinceLastClick < DOUBLE_CLICK_THRESHOLD && timeSinceLastClick > 0) {
+                    // Double-click detected
+                    isDoubleClick = true;
+                } else {
+                    // Single click
+                    isDoubleClick = false;
+                }
+                
+                lastClickTime = currentTime;
                 dropFruit(); 
             }
             
