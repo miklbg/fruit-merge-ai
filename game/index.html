@@ -419,17 +419,17 @@
             const FRUITS = [
                 // Use 'baseRadius' for all pixel values - all fruits are now circles
                 // PNG images only - sizes scaled 3x for higher resolution rendering
-                // hitbox can define custom collision circle: { clipPath, radius, offsetX, offsetY }
-                { level: 0, baseRadius: 22 * NATIVE_SCALE, color: '#2E3771', imagePath: 'assets/1-blueberry.png', score: 5, hitbox: { clipPath: POLYGON_CLIP_PATHS['circle'] } },
-                { level: 1, baseRadius: 26 * NATIVE_SCALE, color: '#842F28', imagePath: 'assets/2-strawberry.png', score: 10, hitbox: { clipPath: POLYGON_CLIP_PATHS['circle'] } },
-                { level: 2, baseRadius: 34 * NATIVE_SCALE, color: '#612B53', imagePath: 'assets/6-grapes.png', score: 20, hitbox: { clipPath: POLYGON_CLIP_PATHS['circle'] } },
-                { level: 3, baseRadius: 38 * NATIVE_SCALE, color: '#B06322', imagePath: 'assets/5-orange.png', score: 35, hitbox: { clipPath: POLYGON_CLIP_PATHS['circle'] } },
-                { level: 4, baseRadius: 48 * NATIVE_SCALE, color: '#952C29', imagePath: 'assets/4-apple.png', score: 55, hitbox: { clipPath: POLYGON_CLIP_PATHS['circle'] } },
-                { level: 5, baseRadius: 58 * NATIVE_SCALE, color: '#AE993B', imagePath: 'assets/3-lemon.png', score: 80, hitbox: { clipPath: POLYGON_CLIP_PATHS['circle'] } },
-                { level: 6, baseRadius: 66 * NATIVE_SCALE, color: '#8B8A62', imagePath: 'assets/7-cantaloupe.png', score: 110, hitbox: { clipPath: POLYGON_CLIP_PATHS['circle'] } },
-                { level: 7, baseRadius: 78 * NATIVE_SCALE, color: '#A27620', imagePath: 'assets/9-pineapple.png', score: 150, hitbox: { clipPath: POLYGON_CLIP_PATHS['circle'] } },
-                { level: 8, baseRadius: 90 * NATIVE_SCALE, color: '#67412B', imagePath: 'assets/8-coconut.png', score: 200, hitbox: { clipPath: POLYGON_CLIP_PATHS['circle'] } },
-                { level: 9, baseRadius: 102 * NATIVE_SCALE, color: '#5B723A', imagePath: 'assets/10-watermelon.png', score: 300, hitbox: { clipPath: POLYGON_CLIP_PATHS['circle'] } },
+                // hitbox can define custom collision circle: { radius, offsetX, offsetY }
+                { level: 0, baseRadius: 22 * NATIVE_SCALE, color: '#2E3771', imagePath: 'assets/1-blueberry.png', score: 5, hitbox: {} },
+                { level: 1, baseRadius: 26 * NATIVE_SCALE, color: '#842F28', imagePath: 'assets/2-strawberry.png', score: 10, hitbox: {} },
+                { level: 2, baseRadius: 34 * NATIVE_SCALE, color: '#612B53', imagePath: 'assets/6-grapes.png', score: 20, hitbox: {} },
+                { level: 3, baseRadius: 38 * NATIVE_SCALE, color: '#B06322', imagePath: 'assets/5-orange.png', score: 35, hitbox: {} },
+                { level: 4, baseRadius: 48 * NATIVE_SCALE, color: '#952C29', imagePath: 'assets/4-apple.png', score: 55, hitbox: {} },
+                { level: 5, baseRadius: 58 * NATIVE_SCALE, color: '#AE993B', imagePath: 'assets/3-lemon.png', score: 80, hitbox: {} },
+                { level: 6, baseRadius: 66 * NATIVE_SCALE, color: '#8B8A62', imagePath: 'assets/7-cantaloupe.png', score: 110, hitbox: {} },
+                { level: 7, baseRadius: 78 * NATIVE_SCALE, color: '#A27620', imagePath: 'assets/9-pineapple.png', score: 150, hitbox: {} },
+                { level: 8, baseRadius: 90 * NATIVE_SCALE, color: '#67412B', imagePath: 'assets/8-coconut.png', score: 200, hitbox: {} },
+                { level: 9, baseRadius: 102 * NATIVE_SCALE, color: '#5B723A', imagePath: 'assets/10-watermelon.png', score: 300, hitbox: {} },
             ];
 
             const MAX_FRUIT_LEVEL = FRUITS.length - 1;
@@ -1298,11 +1298,6 @@
                 // Convert game world dropAreaY to viewport coordinates
                 const viewportDropAreaY = worldToViewportY(dropAreaY);
                 previewFruitEl.style.top = `${headerHeight + viewportDropAreaY - viewportRadius}px`;
-                
-                const hitbox = fruitData.hitbox || {};
-                const clipPath = hitbox.clipPath || POLYGON_CLIP_PATHS['circle'];
-                previewFruitEl.style.clipPath = clipPath;
-                previewFruitEl.style.borderRadius = clipPath === POLYGON_CLIP_PATHS['circle'] ? '50%' : '0';
 
                 moveFruit(currentPreviewX, true); 
             }
