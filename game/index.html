@@ -489,6 +489,12 @@
             
             let bodiesToRemoveSet = new Set();
             let bodiesToAddArray = [];
+            
+            // --- Warning System State ---
+            let isWarningActive = false; // Track if warning is currently active
+            let warningLineThickness = 2; // Current thickness of the warning line
+            let warningAnimationFrame = 0; // Animation frame counter
+            let lastWarningSound = 0; // Timestamp of last warning sound
 
             // --- Audio System ---
             // Sound effects are generated programmatically using the Web Audio API.
@@ -578,6 +584,44 @@
                 oscillator2.start(audioContext.currentTime);
                 oscillator1.stop(audioContext.currentTime + 0.3);
                 oscillator2.stop(audioContext.currentTime + 0.3);
+            }
+
+            // Play a warning sound effect (subtle pulsing tone)
+            function playWarningSound() {
+                if (!areSoundsEnabled) return; // Check if sounds are enabled
+                initAudioContext();
+                
+                const now = Date.now();
+                // Cooldown to prevent sound spam (at least 2 seconds between warnings)
+                if (now - lastWarningSound < 2000) return;
+                lastWarningSound = now;
+                
+                // Create a subtle warning tone - two quick beeps
+                const beeps = [
+                    { freq: 440, start: 0.0, duration: 0.1 },   // A4 - short beep
+                    { freq: 440, start: 0.15, duration: 0.1 }   // A4 - short beep
+                ];
+                
+                beeps.forEach(beep => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    // Use sine wave for a gentle tone
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(beep.freq, audioContext.currentTime + beep.start);
+                    
+                    // Quick fade in and out
+                    gainNode.gain.setValueAtTime(0, audioContext.currentTime + beep.start);
+                    gainNode.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + beep.start + 0.02);
+                    gainNode.gain.setValueAtTime(0.15, audioContext.currentTime + beep.start + beep.duration - 0.02);
+                    gainNode.gain.linearRampToValueAtTime(0.01, audioContext.currentTime + beep.start + beep.duration);
+                    
+                    oscillator.start(audioContext.currentTime + beep.start);
+                    oscillator.stop(audioContext.currentTime + beep.start + beep.duration);
+                });
             }
 
             // Play a game over sound effect (multi-note descending sequence)
@@ -848,6 +892,12 @@
                 saveCounter = 0;
                 currentGameMaxFruit = -1; // Reset current game max on new game
                 
+                // Reset warning state
+                isWarningActive = false;
+                warningLineThickness = 2;
+                warningAnimationFrame = 0;
+                lastWarningSound = 0;
+                
                 highScore = parseInt(localStorage.getItem(HIGHSCORE_KEY) || '0');
                 highScoreEl.textContent = highScore;
                 
@@ -913,7 +963,11 @@
                         isStatic: true,
                         isSensor: true,
                         label: 'gameOverLine',
-                        render: { fillStyle: '#FF0000', opacity: 0.5 } 
+                        render: { 
+                            fillStyle: 'transparent', // Make invisible - we'll draw it manually
+                            strokeStyle: 'transparent',
+                            lineWidth: 0
+                        } 
                     }
                 );
                 World.add(world, gameOverLine);
@@ -1099,6 +1153,42 @@
                             }
                         }
                     });
+                    
+                    // Finally, render the game over line with dynamic styling
+                    if (!isGameOver) {
+                        context.save();
+                        
+                        // Draw glow effect when warning is active
+                        if (isWarningActive) {
+                            // Draw shadow/glow
+                            context.shadowColor = '#FF0000';
+                            context.shadowBlur = 15;
+                            context.shadowOffsetX = 0;
+                            context.shadowOffsetY = 0;
+                            
+                            // Draw multiple passes for stronger glow
+                            for (let i = 0; i < 2; i++) {
+                                context.strokeStyle = '#FF0000';
+                                context.lineWidth = warningLineThickness;
+                                context.globalAlpha = 0.7;
+                                context.beginPath();
+                                context.moveTo(0, gameOverLineY);
+                                context.lineTo(gameWorldWidth, gameOverLineY);
+                                context.stroke();
+                            }
+                        } else {
+                            // Normal red line (no glow)
+                            context.strokeStyle = '#FF0000';
+                            context.lineWidth = warningLineThickness;
+                            context.globalAlpha = 0.5;
+                            context.beginPath();
+                            context.moveTo(0, gameOverLineY);
+                            context.lineTo(gameWorldWidth, gameOverLineY);
+                            context.stroke();
+                        }
+                        
+                        context.restore();
+                    }
 
                     context.restore(); 
                 });
@@ -1451,6 +1541,47 @@
 
                         bodiesToRemoveSet.clear();
                         bodiesToAddArray = [];
+                    }
+                    
+                    // --- Warning Zone Detection ---
+                    if (!isGameOver) {
+                        // Define warning zone as area above red line (with some margin)
+                        const warningZoneHeight = gameWorldHeight * 0.10; // 10% of game height as warning zone
+                        const warningZoneTop = gameOverLineY - warningZoneHeight;
+                        
+                        // Check if any stationary fruits are in the warning zone
+                        const fruitsInWarningZone = Composite.allBodies(world).filter(body => {
+                            if (body.label !== 'fruit') return false;
+                            
+                            // Check if fruit center is in warning zone
+                            const isInWarningZone = body.position.y >= warningZoneTop && body.position.y <= gameOverLineY;
+                            
+                            // Only count fruits that are relatively stationary
+                            const isRelativelyStationary = Math.abs(body.velocity.y) < 2.0;
+                            
+                            return isInWarningZone && isRelativelyStationary;
+                        });
+                        
+                        // Activate warning if fruits are in the zone
+                        if (fruitsInWarningZone.length > 0) {
+                            if (!isWarningActive) {
+                                isWarningActive = true;
+                                playWarningSound();
+                            }
+                        } else {
+                            isWarningActive = false;
+                        }
+                        
+                        // Animate warning line thickness
+                        if (isWarningActive) {
+                            warningAnimationFrame++;
+                            // Pulse between 2 and 8 pixels using a sine wave
+                            const pulseSpeed = 0.15; // Speed of pulsing
+                            warningLineThickness = 5 + 3 * Math.sin(warningAnimationFrame * pulseSpeed);
+                        } else {
+                            warningLineThickness = 2; // Reset to normal thickness
+                            warningAnimationFrame = 0;
+                        }
                     }
 
                     if (!isGameOver) {
