@@ -461,6 +461,7 @@
             let isDropping = false; 
             let lastDropTime = 0; // Track the time of the last fruit drop
             let collisionTimeout = null;
+            let spawnTimeout = null; // Track the spawn timeout from dropFruit
             let currentPreviewX = 0; 
             let saveCounter = 0; 
             let achievedFruits = new Set(); // Track which fruit levels have been achieved 
@@ -1177,13 +1178,14 @@
                     collisionTimeout = null;
                 }, 1500);
 
-                setTimeout(() => {
+                spawnTimeout = setTimeout(() => {
                     if (!isGameOver) {
                         spawnCurrentFruit(); 
                         spawnNextFruit(); 
                         previewFruitEl.style.opacity = '0.8';
                         isDropping = false;
                     }
+                    spawnTimeout = null;
                 }, DROP_COOLDOWN_MS); // Show preview fruit only after cooldown completes
             }
 
@@ -1519,6 +1521,12 @@
                 if (collisionTimeout) {
                     clearTimeout(collisionTimeout);
                     collisionTimeout = null;
+                }
+                
+                // Clear spawn timeout if it exists
+                if (spawnTimeout) {
+                    clearTimeout(spawnTimeout);
+                    spawnTimeout = null;
                 }
                 
                 Runner.stop(runner);
