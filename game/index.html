@@ -1363,14 +1363,16 @@
                 const droppedFruit = createFruitBody(
                     currentPreviewX, 
                     dropAreaY,
-                    currentFruitLevel,
-                    { velocity: { x: 0, y: 2 } } // Add small initial downward velocity
+                    currentFruitLevel
                 );
                 
                 if (!droppedFruit) {
                     isDropping = false;
                     return;
                 }
+                
+                // Set initial downward velocity after body creation
+                Body.setVelocity(droppedFruit, { x: 0, y: 2 });
                 
                 // Update evolution row when a fruit is dropped
                 updateEvolutionRow(currentFruitLevel);
@@ -1534,9 +1536,11 @@
                         
                         let didMerge = false; 
                         bodiesToAddArray.forEach(data => {
-                            const newFruit = createFruitBody(data.x, data.y, data.level, {
-                                velocity: { x: Common.random(-1, 1), y: -2 } 
-                            });
+                            const newFruit = createFruitBody(data.x, data.y, data.level);
+                            
+                            // Set initial velocity after body creation
+                            Body.setVelocity(newFruit, { x: Common.random(-1, 1), y: -2 });
+                            
                             World.add(world, newFruit);
                             updateScore(score + data.score); 
                             createConfetti(data.x, data.y, data.color1, data.color2); 
