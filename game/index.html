@@ -867,6 +867,14 @@
                     });
                     score = loadedState.score;
 
+                    // Restore audio preferences from saved state
+                    if (loadedState.isMusicEnabled !== undefined) {
+                        isMusicEnabled = loadedState.isMusicEnabled;
+                    }
+                    if (loadedState.areSoundsEnabled !== undefined) {
+                        areSoundsEnabled = loadedState.areSoundsEnabled;
+                    }
+
                     // Restore both current and next fruit levels from saved state
                     if (loadedState.currentFruitLevel !== undefined) {
                         // Set nextFruitLevel first since spawnCurrentFruit() uses it
@@ -1218,7 +1226,9 @@
                     score: score,
                     currentFruitLevel: currentFruitLevel,
                     nextFruitLevel: nextFruitLevel,
-                    boxWidth: boxWidth // Save boxWidth for scaling on load
+                    boxWidth: boxWidth, // Save boxWidth for scaling on load
+                    isMusicEnabled: isMusicEnabled, // Save music preference
+                    areSoundsEnabled: areSoundsEnabled // Save sounds preference
                 };
 
                 localStorage.setItem(GAME_STATE_KEY, JSON.stringify(gameState));
@@ -1777,7 +1787,7 @@
                     restartMenuButton.classList.add('hidden');
                 }
                 
-                // Initialize audio toggle states
+                // Initialize audio toggle states from loaded preferences
                 musicStatus.textContent = isMusicEnabled ? 'On' : 'Off';
                 soundsStatus.textContent = areSoundsEnabled ? 'On' : 'Off';
                 
