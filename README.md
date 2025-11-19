@@ -31,10 +31,10 @@ The game features 10 fruit levels that merge progressively, now with beautiful c
 - **Audio Feedback**: Sound effects and background music
 - **Smart Controls**: Touch and mouse support with preview positioning
 - **Fruit Evolution Display**: Visual progress bar showing all fruit types at the bottom of the game, with unachieved fruits shown blurred
-- **Red Line Warning System**: Visual and audio alerts when fruits get dangerously close to the game over line
-  - **Pulsing Red Line**: The game over line pulses in thickness and glows when fruits approach
+- **Red Line Warning System**: Visual and audio alerts when the container is nearly full
+  - **Pulsing Red Line**: The game over line pulses in thickness and glows when fruits approach capacity
   - **Warning Sound**: Subtle audio beep alerts you when fruits enter the danger zone
-  - **Smart Detection**: Only triggers for stationary fruits within 10% of the game height above the line
+  - **Smart Detection**: Triggers when stationary fruits reach 90% of the available play area height
 
 ## 🔊 Audio Attribution
 
