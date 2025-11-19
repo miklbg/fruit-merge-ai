@@ -4,7 +4,7 @@
 
 **No build or installation required!** Just open the game and play.
 
-### Option 1: Open Directly (Simplest)
+### Option 1: Open Directly
 ```bash
 # Navigate to the game directory
 cd game
@@ -19,19 +19,12 @@ Or simply double-click `game/index.html` in your file explorer.
 
 ### Option 2: Local Web Server (Recommended)
 
-For the best experience and to avoid any potential browser file:// protocol restrictions:
+For the best experience and to avoid browser file:// protocol restrictions:
 
 ```bash
-# Navigate to the game directory
 cd game
-
-# Start a simple HTTP server
 python3 -m http.server 8080
-# or
-python -m http.server 8080
-
-# Then open in your browser:
-# http://localhost:8080
+# Then visit: http://localhost:8080
 ```
 
 Alternative servers:
@@ -43,23 +36,25 @@ npx http-server -p 8080
 php -S localhost:8080
 ```
 
-## 🎮 First Launch
+## First Launch
 
 1. Open `game/index.html` using one of the methods above
-2. Click the **"Start"** button to begin playing
-3. The game will load with background music (browser may require interaction first)
+2. Click **"Start"** to begin playing
+3. Background music will play (browser may require user interaction first)
 4. Your game progress and high scores are automatically saved to localStorage
 
-## 📦 What's Included
+## What's Included
 
 All dependencies are included - no installation needed:
-- **Tailwind CSS** - Pre-built CSS included locally in `game/css/tailwind.min.css`
-- **Matter.js** - For physics simulation (loaded via CDN)
-- **Background Music** - Pre-loaded audio file in `assets/`
+- **Tailwind CSS** - Pre-built and included locally
+- **Matter.js** - Physics engine (loaded via CDN)
+- **Background Music** - Audio file in `game/assets/`
+- **Fruit Images** - Custom illustrations in `game/assets/`
 
-### Development Setup (Optional)
+## Development Setup (Optional)
 
-If you want to modify Tailwind styles, you'll need Node.js and npm:
+Only needed if you want to modify Tailwind styles:
+
 ```bash
 # Install dependencies
 npm install
@@ -67,70 +62,31 @@ npm install
 # Rebuild Tailwind CSS after making changes
 npm run build:css
 
-# Or watch for changes and rebuild automatically
+# Watch for changes and rebuild automatically
 npm run watch:css
 ```
 
-## 🔊 Audio Setup
+## Browser Compatibility
 
-### Background Music
-The background music file is already included in the repository:
-- **Path:** `game/assets/children-music-loop-creative-fun-262427.mp3`
-- **Source:** https://pixabay.com/music/happy-childrens-tunes-children-music-loop-creative-fun-262427/
-- **License:** Pixabay License - Free for commercial and non-commercial use
-
-### Audio Features
-- **Sound Effects**: Generated programmatically using Web Audio API
-- **Background Music**: Loops continuously during gameplay
-- **Auto-pause**: Music pauses when you switch tabs or apps
-- **Auto-resume**: Music resumes when you return to the game
-- **Fade effects**: Smooth volume transitions when starting/stopping
-
-### Verify Audio Works
-1. Start the game
-2. Listen for background music (may need to click "Start" first due to browser autoplay policies)
-3. Switch to another tab - music should pause
-4. Return to the game tab - music should resume
-5. Drop a fruit - hear the drop sound effect
-6. Merge fruits - hear the merge sound effect
-
-## 🌐 Browser Compatibility
-
-The game works best on modern browsers that support:
-- HTML5 Canvas
-- HTML5 Audio API
-- Web Audio API
-- Page Visibility API
-- LocalStorage
-
-Recommended browsers:
+Works on modern browsers with HTML5 Canvas and Audio support:
 - Chrome 90+
 - Firefox 88+
 - Safari 14+
 - Edge 90+
 
-## 📱 Mobile Support
+## Mobile Support
 
-The game is fully responsive and works on mobile devices:
-- Touch controls for dragging and dropping fruits
-- Responsive layout that adapts to screen size
-- Touch-optimized physics and controls
+Fully responsive with touch controls for mobile devices.
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 **Music doesn't play:**
-- Check browser console for errors
-- Ensure the music file exists at `game/assets/children-music-loop-creative-fun-262427.mp3`
 - Click anywhere on the page to trigger audio (browser autoplay policy)
+- Ensure `game/assets/children-music-loop-creative-fun-262427.mp3` exists
 - Check browser's autoplay settings
 
 **Game doesn't load:**
-- Ensure you have an internet connection (for CDN resources)
-- Check browser console for errors
+- Ensure internet connection (for CDN resources)
 - Try using a local server instead of file:// protocol
 - Clear browser cache and reload
 
-**Graphics look wrong:**
-- Ensure JavaScript is enabled
-- Try a different browser
-- Check browser console for errors
