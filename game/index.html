@@ -288,32 +288,34 @@
 
             <!-- --- FIX: Bright header --- -->
             <div id="game-header" class="p-4 flex items-center justify-between bg-white/50 backdrop-blur-sm">
-                <!-- Burger Menu Icon -->
-                <button id="burger-menu-button" class="p-2 bg-transparent hover:bg-orange-100 rounded-lg transition-all group" title="Menu" aria-label="Menu">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-600 group-hover:text-orange-700 transition-colors">
-                        <line x1="3" y1="12" x2="21" y2="12"></line>
-                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                        <line x1="3" y1="18" x2="21" y2="18"></line>
-                    </svg>
-                </button>
+                <!-- Burger Menu Icon (left side, fixed width) -->
+                <div class="flex items-center w-15">
+                    <button id="burger-menu-button" class="p-2 bg-transparent hover:bg-orange-100 rounded-lg transition-all group" title="Menu" aria-label="Menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-600 group-hover:text-orange-700 transition-colors">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
                 
                 <!-- Evenly spaced items: Score and High Score -->
-                <div class="flex-1 flex justify-evenly items-center">
-                    <div class="text-center">
+                <div class="flex-1 flex justify-around items-center gap-4">
+                    <div class="text-center flex-1">
                         <span class="text-sm opacity-80">Score</span>
                         <div id="score" class="text-2xl font-bold">0</div>
                     </div>
-                    <div class="text-center">
+                    <div class="text-center flex-1">
                         <span class="text-sm opacity-80">High Score</span>
                         <div id="high-score" class="text-2xl font-bold">0</div>
                     </div>
                 </div>
                 
-                <!-- Next Fruit Icon (right side) -->
-                <div class="text-center">
+                <!-- Next Fruit Icon (right side, fixed width matching left) -->
+                <div class="text-center w-15">
                     <span class="text-sm opacity-80">Next</span>
-                    <div id="next-fruit" class="flex justify-center items-center" style="height: 36px;">
-                        <img id="next-fruit-img" src="" alt="Next fruit" style="max-height: 36px; max-width: 36px; object-fit: contain;">
+                    <div id="next-fruit" class="flex justify-center items-center h-9">
+                        <img id="next-fruit-img" src="" alt="Next fruit" class="max-h-9 max-w-9 object-contain">
                     </div>
                 </div>
             </div>
