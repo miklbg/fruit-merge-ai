@@ -29,8 +29,6 @@
             -ms-user-select: none;
             /* Prevent iOS callout menu */
             -webkit-touch-callout: none;
-            /* --- FIX: Bright background --- */
-            background-color: #e0f2fe; /* bg-sky-100 */
         }
         
         body {
@@ -61,8 +59,6 @@
         #game-wrapper {
             display: flex;
             flex-direction: column;
-            /* --- FIX: Bright wrapper background --- */
-            background-color: #fff7ed; /* bg-orange-50 */
             width: 100%;
             flex: 1 1 auto;
             min-height: 0;
@@ -80,6 +76,7 @@
             right: 0;
             z-index: 20;
             pointer-events: auto;
+            background-color: #5bc1f8;
         }
         
         #preview-fruit {
@@ -104,8 +101,11 @@
             position: absolute;
             bottom: 0;
             z-index: 1;
-            /* Sky blue gradient background */
-            background: linear-gradient(to bottom, #87CEEB 0%, #B0D9F5 100%);
+            /* Replace gradient with world.png background that stretches to fit */
+            background-image: url('assets/world.png');
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
         }
         
         canvas {
@@ -120,8 +120,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* --- FIX: Bright loading screen --- */
-            background-color: #fff7ed; /* bg-orange-50 */
+            background-color: transparent;
             z-index: 99;
             font-size: 1.5rem;
             color: #1f2937; /* text-gray-800 */
@@ -278,8 +277,7 @@
         }
     </style>
 </head>
-<!-- --- FIX: Bright body classes --- -->
-<body class="bg-sky-100 text-gray-800">
+<body class="text-gray-800">
 
     <div id="game-container">
         <div id="game-wrapper">
@@ -314,7 +312,7 @@
             </div>
 
             <!-- --- FIX: Bright header --- -->
-            <div id="game-header" class="p-4 grid grid-cols-4 gap-2 bg-white/50 backdrop-blur-sm">
+            <div id="game-header" class="p-4 grid grid-cols-4 gap-2">
                 <!-- Burger Menu Icon (left aligned) -->
                 <div class="flex items-center justify-start">
                     <button id="burger-menu-button" class="p-2 bg-transparent hover:bg-orange-100 rounded-lg transition-all group" title="Menu" aria-label="Menu">
@@ -524,23 +522,6 @@
                 imageLoadPromises.push(loadPromise);
             });
             
-            // Preload wall texture images
-            const weaveBottomImg = new Image();
-            weaveBottomImg.src = 'assets/weave_bottom.png';
-            const weaveSidesImg = new Image();
-            weaveSidesImg.src = 'assets/weave_sides.png';
-            const weaveEndsImg = new Image();
-            weaveEndsImg.src = 'assets/weave_ends.png';
-            const weaveBackgroundImg = new Image();
-            weaveBackgroundImg.src = 'assets/weave_background.png';
-            
-            // Cache for canvas patterns (performance optimization)
-            let cachedPatterns = {
-                background: null,
-                bottom: null,
-                leftSide: null,
-                rightSide: null
-            }; 
 
             // --- Game State ---
             let engine, render, runner, world;
@@ -1184,120 +1165,7 @@
 
                     context.save(); 
                     
-                    // First, render weave_background from bottom to red line
-                    if (weaveBackgroundImg.complete) {
-                        context.save();
-                        
-                        // Calculate the area to fill (from red line to bottom)
-                        const backgroundHeight = gameWorldHeight - gameOverLineY;
-                        
-                        // Create or use cached repeating pattern from weave_background.png
-                        if (!cachedPatterns.background) {
-                            cachedPatterns.background = context.createPattern(weaveBackgroundImg, 'repeat');
-                        }
-                        const pattern = cachedPatterns.background;
-                        
-                        if (pattern) {
-                            // Position pattern to start at red line
-                            const matrix = new DOMMatrix();
-                            matrix.translateSelf(0, gameOverLineY);
-                            pattern.setTransform(matrix);
-                            
-                            context.fillStyle = pattern;
-                            
-                            // Draw the background from red line to bottom
-                            context.fillRect(
-                                0,
-                                gameOverLineY,
-                                gameWorldWidth,
-                                backgroundHeight
-                            );
-                        }
-                        
-                        context.restore();
-                    }
-                    
-                    // Then, render wall textures
-                    bodies.forEach(body => {
-                        if (body.label === 'ground' && weaveBottomImg.complete) {
-                            // Floor: weave_bottom.png (repeat-x)
-                            context.save();
-                            
-                            // Create or use cached pattern
-                            if (!cachedPatterns.bottom) {
-                                cachedPatterns.bottom = context.createPattern(weaveBottomImg, 'repeat-x');
-                            }
-                            const pattern = cachedPatterns.bottom;
-                            
-                            if (pattern) {
-                                // Transform pattern to align with the body's position in matter.js coordinates
-                                const matrix = new DOMMatrix();
-                                // Fix: Start from top edge of the wall (body.position.y - wallThickness / 2)
-                                matrix.translateSelf(body.position.x - gameWorldWidth / 2, body.position.y - wallThickness / 2);
-                                pattern.setTransform(matrix);
-                                
-                                context.fillStyle = pattern;
-                                
-                                // Draw floor texture at the top edge of the wall body
-                                context.fillRect(
-                                    body.position.x - gameWorldWidth / 2,
-                                    body.position.y - wallThickness / 2,
-                                    gameWorldWidth,
-                                    wallThickness
-                                );
-                            }
-                            context.restore();
-                        } else if ((body.label === 'wall-left' || body.label === 'wall-right') && weaveSidesImg.complete && weaveEndsImg.complete) {
-                            // Calculate actual wall height (from game over line to bottom)
-                            const wallHeight = gameWorldHeight - gameOverLineY;
-                            
-                            // Sides: weave_sides.png (repeat-y)
-                            // Use cached pattern for the appropriate wall
-                            const patternKey = body.label === 'wall-left' ? 'leftSide' : 'rightSide';
-                            if (!cachedPatterns[patternKey]) {
-                                cachedPatterns[patternKey] = context.createPattern(weaveSidesImg, 'repeat-y');
-                            }
-                            const pattern = cachedPatterns[patternKey];
-                            
-                            if (pattern) {
-                                context.save();
-                                
-                                // Transform pattern to align with the body's position in matter.js coordinates
-                                // Scale the pattern to fit the wall width (weaveSidesImg is 175px, wall is 120px)
-                                const scaleX = wallThickness / weaveSidesImg.width;
-                                const matrix = new DOMMatrix();
-                                matrix.translateSelf(body.position.x - wallThickness / 2, body.position.y - wallHeight / 2);
-                                matrix.scaleSelf(scaleX, 1); // Scale horizontally to fit wall width
-                                pattern.setTransform(matrix);
-                                
-                                context.fillStyle = pattern;
-                                
-                                // Draw the main side wall (only up to the red line)
-                                context.fillRect(
-                                    body.position.x - wallThickness / 2,
-                                    body.position.y - wallHeight / 2,
-                                    wallThickness,
-                                    wallHeight
-                                );
-                                context.restore();
-                            }
-                            
-                            // Top of sides: weave_ends.png (drawn at the top of each side wall, at the red line)
-                            context.save();
-                            // Draw the end cap at the top of the side wall
-                            const endHeight = weaveEndsImg.height * (wallThickness / weaveEndsImg.width); // Scale to match wall width
-                            context.drawImage(
-                                weaveEndsImg,
-                                body.position.x - wallThickness / 2,
-                                body.position.y - wallHeight / 2,
-                                wallThickness,
-                                endHeight
-                            );
-                            context.restore();
-                        }
-                    });
-                    
-                    // Then render fruits on top
+                    // Render fruits on top
                     // Set image smoothing once for all fruits (performance optimization)
                     context.imageSmoothingEnabled = true;
                     context.imageSmoothingQuality = 'high';
@@ -2088,14 +1956,6 @@
                     clearTimeout(boosterReenableTimeout);
                     boosterReenableTimeout = null;
                 }
-                
-                // Clear cached patterns (performance optimization)
-                cachedPatterns = {
-                    background: null,
-                    bottom: null,
-                    leftSide: null,
-                    rightSide: null
-                };
                 
                 Runner.stop(runner);
                 Render.stop(render);
