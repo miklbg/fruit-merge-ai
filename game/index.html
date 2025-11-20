@@ -72,8 +72,6 @@
         #game-header {
             position: absolute;
             top: 0;
-            left: 0;
-            right: 0;
             z-index: 20;
             pointer-events: auto;
             background-color: #5bc1f8;
@@ -198,7 +196,6 @@
         }
         
         #fruit-evolution-row {
-            width: 100%;
             background: linear-gradient(to top, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.8));
             backdrop-filter: blur(8px);
             padding: 8px;
@@ -215,6 +212,7 @@
             border-radius: 0 0 12px 12px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             flex-shrink: 0;
+            margin: 0 auto;
         }
         
         .evolution-fruit {
@@ -977,6 +975,13 @@
                 confettiContainer.style.height = `${viewportHeight}px`;
                 confettiContainer.style.width = `${viewportWidth}px`;
                 confettiContainer.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
+                
+                // Set header width and position to match game canvas
+                headerEl.style.width = `${viewportWidth}px`;
+                headerEl.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
+                
+                // Set fruit evolution row width to match game canvas
+                fruitEvolutionRow.style.width = `${viewportWidth}px`;
 
                 currentPreviewX = gameWorldWidth / 2;
 
@@ -2077,6 +2082,13 @@
                 confettiContainer.style.height = `${viewportHeight}px`;
                 confettiContainer.style.width = `${viewportWidth}px`;
                 confettiContainer.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
+                
+                // Set header width and position to match game canvas
+                headerEl.style.width = `${viewportWidth}px`;
+                headerEl.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
+                
+                // Set fruit evolution row width to match game canvas
+                fruitEvolutionRow.style.width = `${viewportWidth}px`;
                 
                 // Update the canvas dimensions - keep at game world size, let CSS scale
                 if (render && render.canvas) {
