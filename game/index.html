@@ -104,8 +104,13 @@
             position: absolute;
             bottom: 0;
             z-index: 1;
-            /* Sky blue gradient background */
-            background: linear-gradient(to bottom, #87CEEB 0%, #B0D9F5 100%);
+            /* Sky blue gradient background with weave pattern */
+            background: 
+                linear-gradient(to bottom, rgba(135, 206, 235, 0.6) 0%, rgba(176, 217, 245, 0.6) 100%),
+                url('assets/weave_background.png');
+            background-size: auto, cover;
+            background-position: center, center;
+            background-repeat: no-repeat, repeat;
         }
         
         canvas {
@@ -1786,8 +1791,10 @@
                 const currentTime = Date.now();
                 const timeSinceLastDrop = currentTime - lastDropTime;
                 
-                // Check if we're in the speed boost window (within 200ms of cooldown) and booster is available
-                if (timeSinceLastDrop < SPEED_BOOST_WINDOW && 
+                // Check if we're in the speed boost window (after delay, within cooldown period) and booster is available
+                // Delay by SPEED_BOOST_WINDOW to prevent using too soon
+                if (timeSinceLastDrop >= SPEED_BOOST_WINDOW && 
+                    timeSinceLastDrop < DROP_COOLDOWN_MS &&
                     lastDroppedFruit && 
                     world.bodies.includes(lastDroppedFruit) &&
                     boosterCooldownCount === 0) {
