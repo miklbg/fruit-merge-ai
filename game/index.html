@@ -1862,6 +1862,7 @@
                     lastDroppedFruit && 
                     world.bodies.includes(lastDroppedFruit) &&
                     boosterCooldownCount === 0 &&
+                    boosterReenableTimeout === null &&
                     boosterUnlocked) {
                     // Boost the most recently dropped fruit's speed to 3x
                     Body.setVelocity(lastDroppedFruit, { 
