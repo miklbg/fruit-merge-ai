@@ -444,7 +444,7 @@
             // --- Game Configuration ---
             
             // Debug visualization: Show collision bodies as white dashed circles
-            const SHOW_COLLISION_OUTLINES = true; // Set to false to disable collision outline visualization
+            const SHOW_COLLISION_OUTLINES = false; // Set to false to disable collision outline visualization (performance optimization)
             
             // Increased native scale for sharper, less pixelated graphics
             // 3x scale provides excellent quality while maintaining good performance
@@ -515,7 +515,15 @@
             const weaveEndsImg = new Image();
             weaveEndsImg.src = 'assets/weave_ends.png';
             const weaveBackgroundImg = new Image();
-            weaveBackgroundImg.src = 'assets/weave_background.png'; 
+            weaveBackgroundImg.src = 'assets/weave_background.png';
+            
+            // Cache for canvas patterns (performance optimization)
+            let cachedPatterns = {
+                background: null,
+                bottom: null,
+                leftSide: null,
+                rightSide: null
+            }; 
 
             // --- Game State ---
             let engine, render, runner, world;
@@ -1166,8 +1174,12 @@
                         // Calculate the area to fill (from red line to bottom)
                         const backgroundHeight = gameWorldHeight - gameOverLineY;
                         
-                        // Create a repeating pattern from weave_background.png
-                        const pattern = context.createPattern(weaveBackgroundImg, 'repeat');
+                        // Create or use cached repeating pattern from weave_background.png
+                        if (!cachedPatterns.background) {
+                            cachedPatterns.background = context.createPattern(weaveBackgroundImg, 'repeat');
+                        }
+                        const pattern = cachedPatterns.background;
+                        
                         if (pattern) {
                             // Position pattern to start at red line
                             const matrix = new DOMMatrix();
@@ -1194,8 +1206,12 @@
                             // Floor: weave_bottom.png (repeat-x)
                             context.save();
                             
-                            // Create pattern and apply transformation to align it properly
-                            const pattern = context.createPattern(weaveBottomImg, 'repeat-x');
+                            // Create or use cached pattern
+                            if (!cachedPatterns.bottom) {
+                                cachedPatterns.bottom = context.createPattern(weaveBottomImg, 'repeat-x');
+                            }
+                            const pattern = cachedPatterns.bottom;
+                            
                             if (pattern) {
                                 // Transform pattern to align with the body's position in matter.js coordinates
                                 const matrix = new DOMMatrix();
@@ -1203,7 +1219,6 @@
                                 matrix.translateSelf(body.position.x - gameWorldWidth / 2, body.position.y - wallThickness / 2);
                                 pattern.setTransform(matrix);
                                 
-                                //context.globalAlpha = 0.9; // Apply transparency
                                 context.fillStyle = pattern;
                                 
                                 // Draw floor texture at the top edge of the wall body
@@ -1220,7 +1235,13 @@
                             const wallHeight = gameWorldHeight - gameOverLineY;
                             
                             // Sides: weave_sides.png (repeat-y)
-                            const pattern = context.createPattern(weaveSidesImg, 'repeat-y');
+                            // Use cached pattern for the appropriate wall
+                            const patternKey = body.label === 'wall-left' ? 'leftSide' : 'rightSide';
+                            if (!cachedPatterns[patternKey]) {
+                                cachedPatterns[patternKey] = context.createPattern(weaveSidesImg, 'repeat-y');
+                            }
+                            const pattern = cachedPatterns[patternKey];
+                            
                             if (pattern) {
                                 context.save();
                                 
@@ -1232,7 +1253,6 @@
                                 matrix.scaleSelf(scaleX, 1); // Scale horizontally to fit wall width
                                 pattern.setTransform(matrix);
                                 
-                                //context.globalAlpha = 0.9; // Apply transparency
                                 context.fillStyle = pattern;
                                 
                                 // Draw the main side wall (only up to the red line)
@@ -1247,7 +1267,6 @@
                             
                             // Top of sides: weave_ends.png (drawn at the top of each side wall, at the red line)
                             context.save();
-                            //context.globalAlpha = 0.9; // Apply transparency
                             // Draw the end cap at the top of the side wall
                             const endHeight = weaveEndsImg.height * (wallThickness / weaveEndsImg.width); // Scale to match wall width
                             context.drawImage(
@@ -1262,6 +1281,10 @@
                     });
                     
                     // Then render fruits on top
+                    // Set image smoothing once for all fruits (performance optimization)
+                    context.imageSmoothingEnabled = true;
+                    context.imageSmoothingQuality = 'high';
+                    
                     bodies.forEach(body => {
                         if (body.label !== 'fruit') return;
 
@@ -1292,9 +1315,6 @@
                                 context.save();
                                 context.translate(body.position.x, body.position.y);
                                 context.rotate(body.angle);
-                                // Enable image smoothing for high-quality rendering at higher resolution
-                                context.imageSmoothingEnabled = true;
-                                context.imageSmoothingQuality = 'high';
                                 context.drawImage(img, -offsetX, -offsetY, drawWidth, drawHeight);
                                 context.restore();
                             }
@@ -1617,38 +1637,47 @@
                 const viewportX = worldToViewportX(worldX);
                 const viewportY = worldToViewportY(worldY);
                 
-                const numPieces = 25;
+                const numPieces = 20; // Reduced from 25 for better performance
+                const fragment = document.createDocumentFragment(); // Use fragment for better performance
+                
                 for (let i = 0; i < numPieces; i++) {
                     const piece = document.createElement('div');
-                    piece.classList.add('confetti-piece');
+                    piece.className = 'confetti-piece'; // Use className instead of classList for better performance
                     
                     const randomColor = Math.random() < 0.5 ? color1 : color2;
-                    piece.style.backgroundColor = randomColor;
-                    
-                    // Fixed piece size in viewport (not scaled with game world)
-                    const pieceSize = 10;
-                    piece.style.width = `${pieceSize}px`;
-                    piece.style.height = `${pieceSize}px`;
-
-                    piece.style.left = `${viewportX}px`;
-                    piece.style.top = `${viewportY}px`;
-                    
-                    confettiContainer.appendChild(piece);
-
                     const angle = Math.random() * Math.PI * 2; 
                     const distance = Math.random() * 70 + 40;
                     const finalX = viewportX + Math.cos(angle) * distance;
                     const finalY = viewportY + Math.sin(angle) * distance;
+                    
+                    // Fixed piece size in viewport (not scaled with game world)
+                    const pieceSize = 10;
+                    
+                    // Set all styles at once for better performance
+                    piece.style.cssText = `
+                        background-color: ${randomColor};
+                        width: ${pieceSize}px;
+                        height: ${pieceSize}px;
+                        left: ${viewportX}px;
+                        top: ${viewportY}px;
+                    `;
+                    
+                    fragment.appendChild(piece);
 
-                    setTimeout(() => {
-                        piece.style.transform = `translate(${finalX - viewportX}px, ${finalY - viewportY}px) scale(0)`;
-                        piece.style.opacity = '0';
-                    }, 10); 
+                    // Use requestAnimationFrame for smoother animations
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            piece.style.transform = `translate(${finalX - viewportX}px, ${finalY - viewportY}px) scale(0)`;
+                            piece.style.opacity = '0';
+                        });
+                    });
 
                     setTimeout(() => {
                         piece.remove();
                     }, 800);
                 }
+                
+                confettiContainer.appendChild(fragment);
             }
             
             // --- Save Game State ---
@@ -1814,7 +1843,7 @@
 
                     if (!isGameOver) {
                         saveCounter++;
-                        if (saveCounter >= 60) { // Save roughly every second
+                        if (saveCounter >= 120) { // Save roughly every 2 seconds (performance optimization)
                             saveGameState();
                             saveCounter = 0;
                         }
@@ -2040,6 +2069,14 @@
                     clearTimeout(boosterReenableTimeout);
                     boosterReenableTimeout = null;
                 }
+                
+                // Clear cached patterns (performance optimization)
+                cachedPatterns = {
+                    background: null,
+                    bottom: null,
+                    leftSide: null,
+                    rightSide: null
+                };
                 
                 Runner.stop(runner);
                 Render.stop(render);
