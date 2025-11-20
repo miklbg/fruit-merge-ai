@@ -443,6 +443,9 @@
 
             // --- Game Configuration ---
             
+            // Debug visualization: Show collision bodies as white dashed circles
+            const SHOW_COLLISION_OUTLINES = true; // Set to false to disable collision outline visualization
+            
             // Increased native scale for sharper, less pixelated graphics
             // 3x scale provides excellent quality while maintaining good performance
             const NATIVE_SCALE = 3; // Scale multiplier for higher resolution rendering
@@ -1297,6 +1300,36 @@
                             }
                         }
                     });
+                    
+                    // Draw collision body outlines if enabled
+                    if (SHOW_COLLISION_OUTLINES) {
+                        bodies.forEach(body => {
+                            if (body.label !== 'fruit') return;
+
+                            const fruitData = FRUITS[body.fruitLevel];
+                            if (fruitData) {
+                                // Get the collision radius and offsets
+                                const collisionRadius = fruitData.radius !== undefined ? fruitData.radius : fruitData.baseRadius;
+                                const offsetX = fruitData.offsetX || 0;
+                                const offsetY = fruitData.offsetY || 0;
+                                
+                                context.save();
+                                
+                                // Set up the dashed white circle style
+                                context.strokeStyle = 'white';
+                                context.lineWidth = 6; // Thick line
+                                context.setLineDash([15, 10]); // Dashed pattern: 15px dash, 10px gap
+                                context.globalAlpha = 0.8; // Slightly transparent
+                                
+                                // Draw circle at the collision body position
+                                context.beginPath();
+                                context.arc(body.position.x, body.position.y, collisionRadius, 0, Math.PI * 2);
+                                context.stroke();
+                                
+                                context.restore();
+                            }
+                        });
+                    }
                     
                     // Finally, render the game over line with dynamic styling
                     if (!isGameOver) {
