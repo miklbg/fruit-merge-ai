@@ -2058,6 +2058,9 @@
                 // Reset preview fruit visibility
                 previewFruitEl.style.opacity = '0.8';
                 
+                // Re-enable pointer events for new game
+                gameWrapper.style.pointerEvents = 'auto';
+                
                 initGame(); 
             }
 
@@ -2076,6 +2079,9 @@
             function triggerGameOver() {
                 if (isGameOver) return; 
                 isGameOver = true;
+                
+                // Disable pointer events immediately after game over
+                gameWrapper.style.pointerEvents = 'none';
                 
                 // Play game over sound effect
                 playGameOverSound();
@@ -2106,6 +2112,9 @@
 
                     // Fade in the modal background, score, and restart button
                     gameOverContent.classList.add('visible');
+                    
+                    // Re-enable pointer events when restart button becomes visible
+                    gameWrapper.style.pointerEvents = 'auto';
                 }, 2000));
                 
                 // Keep the game running for a few more seconds to ensure all fruits fall off screen
