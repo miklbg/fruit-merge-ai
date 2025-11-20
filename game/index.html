@@ -85,15 +85,11 @@
             z-index: 10;
             pointer-events: none;
             opacity: 0.8;
-            border: 2px dashed rgba(0, 0, 0, 0.3); /* Darker dash for light bg */
-            border-radius: 50%; /* Match circular fruit shape */
-            
+            border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            text-shadow: 0 0 5px rgba(0,0,0,0.2);
             backface-visibility: hidden;
-            /* Enable smooth image rendering for better quality */
             image-rendering: auto;
         }
 
@@ -474,50 +470,15 @@
             // --- Matter.js modules ---
             const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Common } = Matter;
 
-            // --- Pre-defined clip-paths for preview shapes (for CSS) ---
-            const POLYGON_CLIP_PATHS = {
-                'circle': 'circle(50%)',
-                5: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)', // Pentagon
-                6: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', // Hexagon
-                7: 'polygon(50% 0%, 90% 20%, 100% 60%, 75% 100%, 25% 100%, 0% 60%, 10% 20%)', // Heptagon
-                8: 'polygon(50% 0%, 85% 15%, 100% 50%, 85% 85%, 50% 100%, 15% 85%, 0% 50%, 15% 15%)', // Octagon
-                10: 'polygon(50% 0%, 80% 10%, 100% 35%, 100% 65%, 80% 90%, 50% 100%, 20% 90%, 0% 65%, 0% 35%, 20% 10%)' // Decagon
-            };
-
             // --- Game Configuration ---
             
-            // Debug visualization: Show collision bodies as white dashed circles
-            const SHOW_COLLISION_OUTLINES = false; // Set to false to disable collision outline visualization (performance optimization)
+            const SHOW_COLLISION_OUTLINES = false;
             
-            // Increased native scale for sharper, less pixelated graphics
-            // 3x scale provides excellent quality while maintaining good performance
-            const NATIVE_SCALE = 3; // Scale multiplier for higher resolution rendering
-            const NATIVE_WIDTH = 400 * NATIVE_SCALE; // Our "design" width (fixed game world width) - now 1200px
-            const NATIVE_HEIGHT = 600 * NATIVE_SCALE; // Our "design" height (fixed game world height, maintains 2:3 aspect ratio) - now 1800px
-            const scaleFactor = 1; // Game world always uses scale factor of 1 (fixed size)
+            const NATIVE_SCALE = 3;
+            const NATIVE_WIDTH = 400 * NATIVE_SCALE;
+            const NATIVE_HEIGHT = 600 * NATIVE_SCALE;
 
-            /*const FRUITS = [
-                // PNG images only - sizes scaled 3x for higher resolution rendering
-                // baseRadius: visual size of the fruit for rendering
-                // radius: collision detection radius (defaults to baseRadius if not specified)
-                // offsetX, offsetY: offset of the collision body from the visual center (to account for leaves, stems, etc.)
-                { level: 0, baseRadius: 22 * NATIVE_SCALE, color: '#2E3771', imagePath: 'assets/1-blueberry.png', score: 5 },
-                { level: 1, baseRadius: 26 * NATIVE_SCALE, color: '#842F28', imagePath: 'assets/2-strawberry.png', score: 10 },
-                { level: 2, baseRadius: 34 * NATIVE_SCALE, color: '#612B53', imagePath: 'assets/6-grapes.png', score: 20 },
-                { level: 3, baseRadius: 38 * NATIVE_SCALE, color: '#B06322', imagePath: 'assets/5-orange.png', score: 35 },
-                { level: 4, baseRadius: 48 * NATIVE_SCALE, radius: 48 * NATIVE_SCALE * 0.95, offsetX: 0, offsetY: 24 * NATIVE_SCALE, color: '#952C29', imagePath: 'assets/4-apple.png', score: 55 },
-                { level: 5, baseRadius: 58 * NATIVE_SCALE, color: '#AE993B', imagePath: 'assets/3-lemon.png', score: 80 },
-                { level: 6, baseRadius: 66 * NATIVE_SCALE, color: '#8B8A62', imagePath: 'assets/7-cantaloupe.png', score: 110 },
-                { level: 7, baseRadius: 78 * NATIVE_SCALE, color: '#A27620', imagePath: 'assets/9-pineapple.png', score: 150 },
-                { level: 8, baseRadius: 90 * NATIVE_SCALE, color: '#67412B', imagePath: 'assets/8-coconut.png', score: 200 },
-                { level: 9, baseRadius: 102 * NATIVE_SCALE, color: '#5B723A', imagePath: 'assets/10-watermelon.png', score: 300 },
-            ];*/
-            
             const FRUITS = [
-                // PNG images only - sizes scaled 3x for higher resolution rendering
-                // baseRadius: visual size of the fruit for rendering
-                // radius: collision detection radius (defaults to baseRadius if not specified)
-                // offsetX, offsetY: offset of the collision body from the visual center (to account for leaves, stems, etc.)
                 { level: 0, baseRadius: 22 * NATIVE_SCALE, radius: 21.00 * NATIVE_SCALE, offsetX: 0, offsetY: 1.1 * NATIVE_SCALE, color: '#2E3771', imagePath: 'assets/1-blueberry.png', score: 5 },
                 { level: 1, baseRadius: 26 * NATIVE_SCALE, radius: 22.80 * NATIVE_SCALE, offsetX: -0.5, offsetY: 2.6 * NATIVE_SCALE, color: '#842F28', imagePath: 'assets/2-strawberry.png', score: 10 },
                 { level: 2, baseRadius: 34 * NATIVE_SCALE, radius: 32.00 * NATIVE_SCALE, offsetX: 0, offsetY: 1 * NATIVE_SCALE, color: '#612B53', imagePath: 'assets/6-grapes.png', score: 20 },
@@ -534,13 +495,12 @@
             const STARTING_FRUIT_LEVELS = 4;
             const GAME_OVER_LINE_Y_PERCENT = 0.18; 
             const DROP_AREA_Y_PERCENT = 0.1; 
-            const BASE_WALL_THICKNESS = 40 * NATIVE_SCALE; // Scale wall thickness
-            const DROP_COOLDOWN_MS = 400; // Cooldown period between fruit drops
+            const BASE_WALL_THICKNESS = 40 * NATIVE_SCALE;
+            const DROP_COOLDOWN_MS = 400;
             const HIGHSCORE_KEY = 'fruit-merge-highscore';
             const GAME_STATE_KEY = 'fruit-merge-gamestate';
             const ACHIEVEMENTS_KEY = 'fruit-merge-achievements';
             
-            // Preload fruit images - PNG only
             const fruitImages = {};
             const imageLoadPromises = [];
             
@@ -550,13 +510,10 @@
                     
                     img.onload = () => {
                         fruitImages[fruit.level] = img;
-                        console.log(`Loaded PNG for fruit level ${fruit.level}: ${fruit.imagePath}`);
                         resolve();
                     };
                     
                     img.onerror = () => {
-                        console.error(`Failed to load PNG for fruit level ${fruit.level}: ${fruit.imagePath}`);
-                        // Store empty image to prevent errors
                         fruitImages[fruit.level] = img;
                         resolve();
                     };
@@ -576,64 +533,53 @@
             let nextFruitLevel = 0;
             let isGameOver = false;
             let isDropping = false; 
-            let lastDropTime = 0; // Track the time of the last fruit drop
+            let lastDropTime = 0;
             let collisionTimeout = null;
-            let spawnTimeout = null; // Track the spawn timeout from dropFruit
-            let gameOverTimeouts = []; // Track timeouts from triggerGameOver
+            let spawnTimeout = null;
+            let gameOverTimeouts = [];
             let currentPreviewX = 0; 
             let saveCounter = 0; 
-            let achievedFruits = new Set(); // Track which fruit levels have been achieved 
-            let currentGameMaxFruit = -1; // Track the maximum fruit level achieved in the current game session
+            let achievedFruits = new Set();
+            let currentGameMaxFruit = -1;
             
             let bodiesToRemoveSet = new Set();
             let bodiesToAddArray = [];
             
-            // --- Warning System State ---
-            let isWarningActive = false; // Track if warning is currently active
-            let warningLineThickness = 2; // Current thickness of the warning line
-            let warningAnimationFrame = 0; // Animation frame counter
-            let lastWarningSound = 0; // Timestamp of last warning sound
+            let isWarningActive = false;
+            let warningLineThickness = 2;
+            let warningAnimationFrame = 0;
+            let lastWarningSound = 0;
             
-            // --- Double-Click Detection State ---
-            let lastDroppedFruit = null; // Track the most recently dropped fruit for speed boost
-            const SPEED_BOOST_WINDOW = 200; // Time window to boost dropped fruit speed (ms)
-            const NORMAL_DROP_VELOCITY = 10; // Normal drop velocity
-            const BOOSTED_DROP_VELOCITY = 50; // Boosted drop velocity (3x normal)
+            let lastDroppedFruit = null;
+            const SPEED_BOOST_WINDOW = 200;
+            const NORMAL_DROP_VELOCITY = 10;
+            const BOOSTED_DROP_VELOCITY = 50;
             
-            // --- Booster Cooldown State ---
-            let boosterCooldownCount = 0; // Number of drops remaining in cooldown
-            const BOOSTER_COOLDOWN_DROPS = 5; // Number of drops to disable booster after use
-            let boosterUnlocked = false; // Track if booster has been unlocked (requires fruit level 5 - lemon)
-            const BOOSTER_UNLOCK_LEVEL = 5; // Fruit level required to unlock booster (lemon)
-            let boosterReenableTimeout = null; // Timeout for re-enabling booster after cooldown
+            let boosterCooldownCount = 0;
+            const BOOSTER_COOLDOWN_DROPS = 5;
+            let boosterUnlocked = false;
+            const BOOSTER_UNLOCK_LEVEL = 5;
+            let boosterReenableTimeout = null;
             
-            // --- Update Booster Indicator ---
             function updateBoosterIndicator() {
                 if (!boosterUnlocked) {
-                    // Locked state - not yet unlocked
                     boosterIndicator.classList.add('disabled');
                 } else if (boosterCooldownCount > 0) {
-                    // Cooldown state - unlocked but in cooldown
                     boosterIndicator.classList.add('disabled');
                 } else {
-                    // Available state - unlocked and ready to use
                     boosterIndicator.classList.remove('disabled');
                 }
             }
             
-            // --- Update Booster Indicator Position ---
             function updateBoosterIndicatorPosition() {
-                // Position the indicator centered between the bottom of the header and the red line
                 const gameOverLineViewportY = worldToViewportY(gameOverLineY);
                 const centerY = headerHeight + (gameOverLineViewportY / 2);
                 boosterIndicator.style.top = `${centerY}px`;
-                // Also update tooltip position to match
                 boosterTooltip.style.top = `${centerY}px`;
             }
             
-            // --- Toggle Booster Tooltip ---
             function toggleBoosterTooltip(e) {
-                e.stopPropagation(); // Prevent event from bubbling
+                e.stopPropagation();
                 const isVisible = boosterTooltip.classList.contains('visible');
                 if (isVisible) {
                     hideBoosterTooltip();
@@ -644,7 +590,6 @@
             
             function showBoosterTooltip() {
                 boosterTooltip.classList.add('visible');
-                // Add listener to hide tooltip when clicking outside
                 setTimeout(() => {
                     document.addEventListener('click', hideBoosterTooltipOnClickOutside);
                 }, 0);
@@ -656,22 +601,18 @@
             }
             
             function hideBoosterTooltipOnClickOutside(e) {
-                // Check if click is outside the indicator OR on the tooltip
                 if (!boosterIndicator.contains(e.target)) {
                     hideBoosterTooltip();
                 }
             }
 
             // --- Audio System ---
-            // Sound effects are generated programmatically using the Web Audio API.
-            // Background music is from Pixabay (see assets/README.md for details)
-            // Using Web Audio API wrapper for reliable cross-browser volume control
             let audioContext = null;
             let bgmController = null;
-            let isMusicEnabled = true; // User preference for music
-            let areSoundsEnabled = true; // User preference for sound effects
-            let isMusicPaused = false; // Current music playback state
-            let musicFadeInterval = null; // Track the music fade interval
+            let isMusicEnabled = true;
+            let areSoundsEnabled = true;
+            let isMusicPaused = false;
+            let musicFadeInterval = null;
 
             function initAudioContext() {
                 if (!audioContext) {
@@ -685,23 +626,19 @@
                         // Create Web Audio BGM controller with default gain of 0.25 (~-12dB)
                         bgmController = createBgmController({
                             audioElOrSrc: 'assets/children-music-loop-creative-fun-262427.mp3',
-                            defaultGain: 0.25,  // Much louder than previous 0.05, but still pleasant
+                            defaultGain: 0.25,
                             loop: true
                         });
                         
-                        // Setup unlock on user gesture for iOS Safari
                         bgmController.unlockOnUserGesture();
-                        
-                        console.log('Background music controller initialized');
                     } catch (error) {
-                        console.warn('Background music could not be initialized:', error);
+                        // Background music initialization failed silently
                     }
                 }
             }
 
-            // Play a drop sound effect (short descending tone)
             function playDropSound() {
-                if (!areSoundsEnabled) return; // Check if sounds are enabled
+                if (!areSoundsEnabled) return;
                 initAudioContext();
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
@@ -720,9 +657,8 @@
                 oscillator.stop(audioContext.currentTime + 0.1);
             }
 
-            // Play a merge sound effect (cheerful ascending chime)
             function playMergeSound() {
-                if (!areSoundsEnabled) return; // Check if sounds are enabled
+                if (!areSoundsEnabled) return;
                 initAudioContext();
                 const oscillator1 = audioContext.createOscillator();
                 const oscillator2 = audioContext.createOscillator();
@@ -735,13 +671,13 @@
                 oscillator1.type = 'sine';
                 oscillator2.type = 'sine';
                 
-                oscillator1.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-                oscillator1.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.05); // E5
-                oscillator1.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.1); // G5
+                oscillator1.frequency.setValueAtTime(523.25, audioContext.currentTime);
+                oscillator1.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.05);
+                oscillator1.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.1);
                 
-                oscillator2.frequency.setValueAtTime(523.25 * 2, audioContext.currentTime); // C6
-                oscillator2.frequency.setValueAtTime(659.25 * 2, audioContext.currentTime + 0.05); // E6
-                oscillator2.frequency.setValueAtTime(783.99 * 2, audioContext.currentTime + 0.1); // G6
+                oscillator2.frequency.setValueAtTime(523.25 * 2, audioContext.currentTime);
+                oscillator2.frequency.setValueAtTime(659.25 * 2, audioContext.currentTime + 0.05);
+                oscillator2.frequency.setValueAtTime(783.99 * 2, audioContext.currentTime + 0.1);
                 
                 gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
@@ -752,20 +688,17 @@
                 oscillator2.stop(audioContext.currentTime + 0.3);
             }
 
-            // Play a warning sound effect (subtle pulsing tone)
             function playWarningSound() {
-                if (!areSoundsEnabled) return; // Check if sounds are enabled
+                if (!areSoundsEnabled) return;
                 initAudioContext();
                 
                 const now = Date.now();
-                // Cooldown to prevent sound spam (at least 2 seconds between warnings)
                 if (now - lastWarningSound < 2000) return;
                 lastWarningSound = now;
                 
-                // Create a subtle warning tone - two quick beeps
                 const beeps = [
-                    { freq: 440, start: 0.0, duration: 0.1 },   // A4 - short beep
-                    { freq: 440, start: 0.15, duration: 0.1 }   // A4 - short beep
+                    { freq: 440, start: 0.0, duration: 0.1 },
+                    { freq: 440, start: 0.15, duration: 0.1 }
                 ];
                 
                 beeps.forEach(beep => {
@@ -775,11 +708,9 @@
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
                     
-                    // Use sine wave for a gentle tone
                     oscillator.type = 'sine';
                     oscillator.frequency.setValueAtTime(beep.freq, audioContext.currentTime + beep.start);
                     
-                    // Quick fade in and out
                     gainNode.gain.setValueAtTime(0, audioContext.currentTime + beep.start);
                     gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + beep.start + 0.02);
                     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + beep.start + beep.duration - 0.02);
@@ -790,16 +721,14 @@
                 });
             }
 
-            // Play a booster available sound effect (cheerful ascending chime)
             function playBoosterAvailableSound() {
-                if (!areSoundsEnabled) return; // Check if sounds are enabled
+                if (!areSoundsEnabled) return;
                 initAudioContext();
                 
-                // Create a cheerful "power-up available" sound - ascending notes
                 const notes = [
-                    { freq: 523.25, start: 0.0, duration: 0.1 },   // C5
-                    { freq: 659.25, start: 0.08, duration: 0.1 },  // E5
-                    { freq: 783.99, start: 0.16, duration: 0.15 }  // G5 (longer final note)
+                    { freq: 523.25, start: 0.0, duration: 0.1 },
+                    { freq: 659.25, start: 0.08, duration: 0.1 },
+                    { freq: 783.99, start: 0.16, duration: 0.15 }
                 ];
                 
                 notes.forEach(note => {
@@ -809,11 +738,9 @@
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
                     
-                    // Use sine wave for a pleasant tone
                     oscillator.type = 'sine';
                     oscillator.frequency.setValueAtTime(note.freq, audioContext.currentTime + note.start);
                     
-                    // Fade in and out for smooth sound
                     const fadeIn = 0.02;
                     const fadeOut = 0.03;
                     const noteEnd = note.start + note.duration;
@@ -828,26 +755,21 @@
                 });
             }
 
-            // Play a booster used sound effect (quick whoosh/power sound)
             function playBoosterUsedSound() {
-                if (!areSoundsEnabled) return; // Check if sounds are enabled
+                if (!areSoundsEnabled) return;
                 initAudioContext();
                 
-                // Create a quick "whoosh" power-up sound - descending sweep
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
                 
                 oscillator.connect(gainNode);
                 gainNode.connect(audioContext.destination);
                 
-                // Use sawtooth for more energetic sound
                 oscillator.type = 'sawtooth';
                 
-                // Sweep from high to low frequency quickly
                 oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
                 oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.15);
                 
-                // Quick attack and decay
                 gainNode.gain.setValueAtTime(0, audioContext.currentTime);
                 gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.02);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
@@ -856,21 +778,16 @@
                 oscillator.stop(audioContext.currentTime + 0.15);
             }
 
-            // Play a game over sound effect (multi-note descending sequence)
             function playGameOverSound() {
-                if (!areSoundsEnabled) return; // Check if sounds are enabled
+                if (!areSoundsEnabled) return;
                 initAudioContext();
                 
-                // Create a more elaborate game over sound with multiple notes
-                // Musical sequence: E4 -> C4 -> A3 -> F3 (descending sad melody)
                 const notes = [
-                    { freq: 329.63, start: 0.0, duration: 0.4 },    // E4
-                    { freq: 261.63, start: 0.35, duration: 0.4 },   // C4
-                    { freq: 220.00, start: 0.70, duration: 0.5 },   // A3
-                    { freq: 174.61, start: 1.15, duration: 0.65 }   // F3 (longer final note)
+                    { freq: 329.63, start: 0.0, duration: 0.4 },
+                    { freq: 261.63, start: 0.35, duration: 0.4 },
+                    { freq: 220.00, start: 0.70, duration: 0.5 },
+                    { freq: 174.61, start: 1.15, duration: 0.65 }
                 ];
-                
-                const totalDuration = 1.8; // Total sound duration
                 
                 notes.forEach(note => {
                     const oscillator = audioContext.createOscillator();
@@ -879,11 +796,9 @@
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
                     
-                    // Use triangle wave for a softer, sadder tone
                     oscillator.type = 'triangle';
                     oscillator.frequency.setValueAtTime(note.freq, audioContext.currentTime + note.start);
                     
-                    // Fade in and fade out for each note
                     const fadeIn = 0.05;
                     const fadeOut = 0.1;
                     const noteEnd = note.start + note.duration;
@@ -898,60 +813,48 @@
                 });
             }
 
-            // Start background music
             function startBackgroundMusic() {
-                if (!isMusicEnabled) return; // Check if music is enabled
+                if (!isMusicEnabled) return;
                 initBackgroundMusic();
                 if (bgmController && !isMusicPaused) {
-                    bgmController.play().catch(error => {
-                        console.warn('Autoplay was prevented. User interaction required.');
-                    });
+                    bgmController.play().catch(() => {});
                 }
             }
 
-            // Stop background music with fade out
             function stopBackgroundMusic() {
                 if (bgmController && bgmController.isPlaying()) {
                     isMusicPaused = true;
                     
-                    // Clear any existing fade interval first
                     if (musicFadeInterval) {
                         clearInterval(musicFadeInterval);
                     }
                     
-                    // Fade out effect using Web Audio gain
                     musicFadeInterval = setInterval(() => {
                         const currentGain = bgmController.getGainLinear();
                         if (currentGain > 0.01) {
                             bgmController.setGainLinear(currentGain - 0.01);
                         } else {
                             bgmController.pause();
-                            bgmController.setGainLinear(0.25); // Reset gain for next play
+                            bgmController.setGainLinear(0.25);
                             clearInterval(musicFadeInterval);
                             musicFadeInterval = null;
                         }
                     }, 50);
                 }
             }
-            
-            // Resume background music (for focus events)
             function resumeBackgroundMusic() {
                 if (bgmController && isMusicPaused && !isGameOver) {
                     isMusicPaused = false;
                     bgmController.setGainLinear(0.25);
-                    bgmController.play().catch(error => {
-                        console.warn('Could not resume music:', error);
-                    });
+                    bgmController.play().catch(() => {});
                 }
             }
 
             // --- Game Dimensions ---
-            // Viewport dimensions (actual canvas/display size - will be set in initGame)
             let viewportWidth = 0;
             let viewportHeight = 0;
             let headerHeight = 0;
             
-            // Game world dimensions (fixed, physics works in this space)
             const gameWorldWidth = NATIVE_WIDTH;
             const gameWorldHeight = NATIVE_HEIGHT;
             const gameOverLineY = gameWorldHeight * GAME_OVER_LINE_Y_PERCENT;
@@ -1060,17 +963,14 @@
                         const achievementsArray = JSON.parse(savedAchievements);
                         achievedFruits = new Set(achievementsArray);
                     } catch (e) {
-                        console.error("Could not parse saved achievements:", e);
                         achievedFruits = new Set();
                     }
                 } else {
-                    // By default, the first fruit (level 0) is always unlocked
                     achievedFruits = new Set([0]);
                 }
             } 
 
             
-            // --- ROBUST STARTUP ---
             const layoutCheckInterval = setInterval(() => {
                 const w = gameWrapper.clientWidth;
                 const h = gameWrapper.clientHeight;
@@ -1078,14 +978,11 @@
                 
                 if (w > 0 && h > 0 && hh > 0) {
                     clearInterval(layoutCheckInterval);
-                    console.log(`Layout ready. Wrapper: ${w}x${h}, Header: ${hh}`);
                     loadingScreen.style.display = 'none';
                     initGame(); 
                     setupResizeObserver();
                     setupVisibilityHandlers();
                     setupPauseModal();
-                } else {
-                    console.log("Waiting for layout dimensions...");
                 }
             }, 50);
 
@@ -1225,13 +1122,11 @@
                     try {
                         loadedState = JSON.parse(savedStateString);
                     } catch (e) {
-                        console.error("Could not parse saved state:", e);
                         localStorage.removeItem(GAME_STATE_KEY); 
                     }
                 }
 
                 if (loadedState) {
-                    console.log("Loading from saved state...");
                     // No need to scale positions anymore - game world is fixed size
                     
                     loadedState.fruits.forEach(fruit => {
@@ -1286,10 +1181,8 @@
                         spawnNextFruit(); 
                     }
                     
-                    // Also mark the next fruit as achieved and update current game max
                     updateEvolutionRow(nextFruitLevel); 
                 } else {
-                    console.log("Starting new game...");
                     score = 0;
                     spawnNextFruit(); 
                     spawnCurrentFruit(); 
@@ -2347,12 +2240,11 @@
                         const savedTimestamp = savedState.timestamp || 0;
                         const timeDifference = currentTime - savedTimestamp;
                         
-                        // Auto-resume if saved data is less than 20 seconds old (20000 milliseconds)
                         if (timeDifference < 20000 && timeDifference >= 0) {
                             shouldAutoResume = true;
                         }
                     } catch (e) {
-                        console.error("Could not parse saved state for auto-resume check:", e);
+                        // Could not parse saved state
                     }
                 }
                 
@@ -2369,10 +2261,7 @@
                 musicStatus.textContent = isMusicEnabled ? 'On' : 'Off';
                 soundsStatus.textContent = areSoundsEnabled ? 'On' : 'Off';
                 
-                // Auto-resume if saved data is recent
                 if (shouldAutoResume) {
-                    console.log("Auto-resuming game (saved data is less than 20 seconds old)");
-                    // Hide the pause modal
                     pauseModal.classList.add('hidden');
                     
                     // Initialize background music on auto-resume if not already done
