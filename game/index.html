@@ -982,6 +982,9 @@
                 
                 // Set fruit evolution row width to match game canvas
                 fruitEvolutionRow.style.width = `${viewportWidth}px`;
+                
+                // Set game container width to match game canvas
+                gameContainer.style.width = `${viewportWidth}px`;
 
                 currentPreviewX = gameWorldWidth / 2;
 
@@ -2089,6 +2092,9 @@
                 
                 // Set fruit evolution row width to match game canvas
                 fruitEvolutionRow.style.width = `${viewportWidth}px`;
+                
+                // Set game container width to match game canvas
+                gameContainer.style.width = `${viewportWidth}px`;
                 
                 // Update the canvas dimensions - keep at game world size, let CSS scale
                 if (render && render.canvas) {
