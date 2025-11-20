@@ -656,8 +656,8 @@
             }
             
             function hideBoosterTooltipOnClickOutside(e) {
-                // Check if click is outside both the indicator and tooltip
-                if (!boosterIndicator.contains(e.target) && !boosterTooltip.contains(e.target)) {
+                // Check if click is outside the indicator OR on the tooltip
+                if (!boosterIndicator.contains(e.target)) {
                     hideBoosterTooltip();
                 }
             }
