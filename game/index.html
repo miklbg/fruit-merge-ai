@@ -509,7 +509,9 @@
             const weaveSidesImg = new Image();
             weaveSidesImg.src = 'assets/weave_sides.png';
             const weaveEndsImg = new Image();
-            weaveEndsImg.src = 'assets/weave_ends.png'; 
+            weaveEndsImg.src = 'assets/weave_ends.png';
+            const weaveBackgroundImg = new Image();
+            weaveBackgroundImg.src = 'assets/weave_background.png'; 
 
             // --- Game State ---
             let engine, render, runner, world;
@@ -1153,7 +1155,36 @@
 
                     context.save(); 
                     
-                    // First, render wall textures
+                    // First, render weave_background from bottom to red line
+                    if (weaveBackgroundImg.complete) {
+                        context.save();
+                        
+                        // Calculate the area to fill (from red line to bottom)
+                        const backgroundHeight = gameWorldHeight - gameOverLineY;
+                        
+                        // Create a repeating pattern from weave_background.png
+                        const pattern = context.createPattern(weaveBackgroundImg, 'repeat');
+                        if (pattern) {
+                            // Position pattern to start at red line
+                            const matrix = new DOMMatrix();
+                            matrix.translateSelf(0, gameOverLineY);
+                            pattern.setTransform(matrix);
+                            
+                            context.fillStyle = pattern;
+                            
+                            // Draw the background from red line to bottom
+                            context.fillRect(
+                                0,
+                                gameOverLineY,
+                                gameWorldWidth,
+                                backgroundHeight
+                            );
+                        }
+                        
+                        context.restore();
+                    }
+                    
+                    // Then, render wall textures
                     bodies.forEach(body => {
                         if (body.label === 'ground' && weaveBottomImg.complete) {
                             // Floor: weave_bottom.png (repeat-x)
