@@ -546,12 +546,20 @@
             // --- Booster Cooldown State ---
             let boosterCooldownCount = 0; // Number of drops remaining in cooldown
             const BOOSTER_COOLDOWN_DROPS = 5; // Number of drops to disable booster after use
+            let boosterUnlocked = false; // Track if booster has been unlocked (requires fruit level 5 - lemon)
+            const BOOSTER_UNLOCK_LEVEL = 5; // Fruit level required to unlock booster (lemon)
+            let boosterReenableTimeout = null; // Timeout for re-enabling booster after cooldown
             
             // --- Update Booster Indicator ---
             function updateBoosterIndicator() {
-                if (boosterCooldownCount > 0) {
+                if (!boosterUnlocked) {
+                    // Locked state - not yet unlocked
+                    boosterIndicator.classList.add('disabled');
+                } else if (boosterCooldownCount > 0) {
+                    // Cooldown state - unlocked but in cooldown
                     boosterIndicator.classList.add('disabled');
                 } else {
+                    // Available state - unlocked and ready to use
                     boosterIndicator.classList.remove('disabled');
                 }
             }
@@ -836,6 +844,12 @@
                     currentGameMaxFruit = fruitLevel;
                 }
                 
+                // Unlock booster when reaching fruit level 5 (lemon) or higher
+                if (fruitLevel >= BOOSTER_UNLOCK_LEVEL && !boosterUnlocked) {
+                    boosterUnlocked = true;
+                    updateBoosterIndicator();
+                }
+                
                 // Save achievements to localStorage
                 localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(Array.from(achievedFruits)));
                 
@@ -961,6 +975,11 @@
                 saveCounter = 0;
                 currentGameMaxFruit = -1; // Reset current game max on new game
                 boosterCooldownCount = 0; // Reset booster cooldown
+                boosterUnlocked = false; // Reset booster unlock state
+                if (boosterReenableTimeout) {
+                    clearTimeout(boosterReenableTimeout);
+                    boosterReenableTimeout = null;
+                }
                 updateBoosterIndicator(); // Update indicator display
                 
                 // Reset warning state
@@ -1086,8 +1105,12 @@
                     // Restore booster cooldown state
                     if (loadedState.boosterCooldownCount !== undefined) {
                         boosterCooldownCount = loadedState.boosterCooldownCount;
-                        updateBoosterIndicator();
                     }
+                    // Restore booster unlock state
+                    if (loadedState.boosterUnlocked !== undefined) {
+                        boosterUnlocked = loadedState.boosterUnlocked;
+                    }
+                    updateBoosterIndicator();
 
                     // Restore both current and next fruit levels from saved state
                     if (loadedState.currentFruitLevel !== undefined) {
@@ -1453,6 +1476,22 @@
                 // Decrement booster cooldown counter
                 if (boosterCooldownCount > 0) {
                     boosterCooldownCount--;
+                    
+                    // If this was the 5th drop, schedule re-enable after 400ms delay
+                    if (boosterCooldownCount === 0) {
+                        // Clear any existing timeout
+                        if (boosterReenableTimeout) {
+                            clearTimeout(boosterReenableTimeout);
+                        }
+                        // Re-enable booster after 400ms delay
+                        boosterReenableTimeout = setTimeout(() => {
+                            updateBoosterIndicator();
+                            boosterReenableTimeout = null;
+                        }, 400);
+                    } else {
+                        updateBoosterIndicator();
+                    }
+                } else {
                     updateBoosterIndicator();
                 }
                 
@@ -1572,6 +1611,7 @@
                     isMusicEnabled: isMusicEnabled, // Save music preference
                     areSoundsEnabled: areSoundsEnabled, // Save sounds preference
                     boosterCooldownCount: boosterCooldownCount, // Save booster cooldown state
+                    boosterUnlocked: boosterUnlocked, // Save booster unlock state
                     timestamp: Date.now() // Save timestamp for auto-resume feature
                 };
 
@@ -1790,7 +1830,8 @@
                 if (timeSinceLastDrop < SPEED_BOOST_WINDOW && 
                     lastDroppedFruit && 
                     world.bodies.includes(lastDroppedFruit) &&
-                    boosterCooldownCount === 0) {
+                    boosterCooldownCount === 0 &&
+                    boosterUnlocked) {
                     // Boost the most recently dropped fruit's speed to 3x
                     Body.setVelocity(lastDroppedFruit, { 
                         x: lastDroppedFruit.velocity.x, 
@@ -1927,6 +1968,12 @@
                 // Clear all game over timeouts if they exist
                 gameOverTimeouts.forEach(timeout => clearTimeout(timeout));
                 gameOverTimeouts = [];
+                
+                // Clear booster reenable timeout if it exists
+                if (boosterReenableTimeout) {
+                    clearTimeout(boosterReenableTimeout);
+                    boosterReenableTimeout = null;
+                }
                 
                 Runner.stop(runner);
                 Render.stop(render);
