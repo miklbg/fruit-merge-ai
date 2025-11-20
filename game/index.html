@@ -1946,17 +1946,17 @@
             
             // --- Event Handlers (to allow removal) ---
             function handlePointerDown(e) { 
-                if (isModalVisible()) return;
+                if (isGameOver || isModalVisible()) return;
                 e.preventDefault(); 
                 moveFruit(e.clientX); 
             }
             function handlePointerMove(e) { 
-                if (isModalVisible()) return;
+                if (isGameOver || isModalVisible()) return;
                 e.preventDefault(); 
                 moveFruit(e.clientX); 
             }
             function handlePointerUp(e) { 
-                if (isModalVisible()) return;
+                if (isGameOver || isModalVisible()) return;
                 e.preventDefault(); 
                 
                 const currentTime = Date.now();
