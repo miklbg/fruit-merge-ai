@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Collision Box Editor</title>
+    <link rel="stylesheet" href="css/tailwind.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        
+        .fruit-canvas {
+            border: 2px solid #e5e7eb;
+            background: linear-gradient(to bottom, #87CEEB 0%, #B0D9F5 100%);
+            border-radius: 8px;
+        }
+        
+        .control-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        
+        .control-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+        
+        .fruit-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .export-output {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">Fruit Collision Box Editor</h1>
+        <p class="text-gray-600 mb-8">Adjust collision boxes for each fruit and export the FRUITS array</p>
+        
+        <!-- Controls -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Global Settings</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="control-label">Native Scale (Current: 3)</label>
+                    <input type="number" id="nativeScale" value="3" min="1" max="5" step="1" class="control-input">
+                    <p class="text-xs text-gray-500 mt-1">Scale multiplier used in the game</p>
+                </div>
+                <div>
+                    <label class="control-label">Canvas Size</label>
+                    <input type="number" id="canvasSize" value="300" min="200" max="500" step="50" class="control-input">
+                    <p class="text-xs text-gray-500 mt-1">Display size of each fruit canvas</p>
+                </div>
+                <div class="flex items-end">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="showCollisionOutlines" checked class="mr-2">
+                        <span class="text-sm font-medium text-gray-700">Show Collision Outlines</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fruits Grid -->
+        <div id="fruitsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Fruit cards will be generated here -->
+        </div>
+        
+        <!-- Export Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">Export FRUITS Array</h2>
+                <button id="exportBtn" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">
+                    Generate Export
+                </button>
+            </div>
+            <div id="exportOutput" class="export-output">
+                Click "Generate Export" to create the FRUITS array code...
+            </div>
+            <button id="copyBtn" class="mt-4 px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">
+                Copy to Clipboard
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Native scale from game
+        const NATIVE_SCALE = 3;
+        
+        // Initial FRUITS array from the game
+        const FRUITS = [
+            { level: 0, baseRadius: 22 * NATIVE_SCALE, color: '#2E3771', imagePath: 'assets/1-blueberry.png', score: 5 },
+            { level: 1, baseRadius: 26 * NATIVE_SCALE, color: '#842F28', imagePath: 'assets/2-strawberry.png', score: 10 },
+            { level: 2, baseRadius: 34 * NATIVE_SCALE, color: '#612B53', imagePath: 'assets/6-grapes.png', score: 20 },
+            { level: 3, baseRadius: 38 * NATIVE_SCALE, color: '#B06322', imagePath: 'assets/5-orange.png', score: 35 },
+            { level: 4, baseRadius: 48 * NATIVE_SCALE, radius: 48 * NATIVE_SCALE * 0.95, offsetX: 0, offsetY: 24 * NATIVE_SCALE, color: '#952C29', imagePath: 'assets/4-apple.png', score: 55 },
+            { level: 5, baseRadius: 58 * NATIVE_SCALE, color: '#AE993B', imagePath: 'assets/3-lemon.png', score: 80 },
+            { level: 6, baseRadius: 66 * NATIVE_SCALE, color: '#8B8A62', imagePath: 'assets/7-cantaloupe.png', score: 110 },
+            { level: 7, baseRadius: 78 * NATIVE_SCALE, color: '#A27620', imagePath: 'assets/9-pineapple.png', score: 150 },
+            { level: 8, baseRadius: 90 * NATIVE_SCALE, color: '#67412B', imagePath: 'assets/8-coconut.png', score: 200 },
+            { level: 9, baseRadius: 102 * NATIVE_SCALE, color: '#5B723A', imagePath: 'assets/10-watermelon.png', score: 300 },
+        ];
+        
+        // Preload fruit images
+        const fruitImages = {};
+        const imageLoadPromises = [];
+        
+        FRUITS.forEach(fruit => {
+            const loadPromise = new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    fruitImages[fruit.level] = img;
+                    resolve();
+                };
+                img.onerror = () => {
+                    console.error(`Failed to load image: ${fruit.imagePath}`);
+                    fruitImages[fruit.level] = img;
+                    resolve();
+                };
+                img.src = fruit.imagePath;
+            });
+            imageLoadPromises.push(loadPromise);
+        });
+        
+        // Wait for all images to load
+        Promise.all(imageLoadPromises).then(() => {
+            initializeFruitCards();
+        });
+        
+        // State management
+        let currentNativeScale = 3;
+        let canvasSize = 300;
+        let showCollisionOutlines = true;
+        
+        // Event listeners for global settings
+        document.getElementById('nativeScale').addEventListener('input', (e) => {
+            currentNativeScale = parseInt(e.target.value);
+            updateAllCanvases();
+        });
+        
+        document.getElementById('canvasSize').addEventListener('input', (e) => {
+            canvasSize = parseInt(e.target.value);
+            updateAllCanvases();
+        });
+        
+        document.getElementById('showCollisionOutlines').addEventListener('change', (e) => {
+            showCollisionOutlines = e.target.checked;
+            updateAllCanvases();
+        });
+        
+        function initializeFruitCards() {
+            const grid = document.getElementById('fruitsGrid');
+            grid.innerHTML = '';
+            
+            FRUITS.forEach((fruit, index) => {
+                const card = createFruitCard(fruit, index);
+                grid.appendChild(card);
+            });
+        }
+        
+        function createFruitCard(fruit, index) {
+            const card = document.createElement('div');
+            card.className = 'fruit-card';
+            
+            const fruitName = fruit.imagePath.split('/').pop().split('.')[0].split('-').slice(1).join('-');
+            
+            card.innerHTML = `
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Level ${fruit.level}: ${capitalize(fruitName)}</h3>
+                <canvas id="canvas-${index}" class="fruit-canvas mx-auto mb-4" width="${canvasSize}" height="${canvasSize}"></canvas>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="control-label">Base Radius</label>
+                        <input type="number" id="baseRadius-${index}" value="${fruit.baseRadius / NATIVE_SCALE}" 
+                               class="control-input" step="1" min="10" max="200">
+                        <p class="text-xs text-gray-500 mt-1">Visual size (before scale)</p>
+                    </div>
+                    <div>
+                        <label class="control-label">Collision Radius</label>
+                        <input type="number" id="radius-${index}" value="${fruit.radius ? (fruit.radius / NATIVE_SCALE).toFixed(1) : ''}" 
+                               class="control-input" step="0.1" min="10" max="200" placeholder="= Base Radius">
+                        <p class="text-xs text-gray-500 mt-1">Collision size (optional)</p>
+                    </div>
+                    <div>
+                        <label class="control-label">Offset X</label>
+                        <input type="number" id="offsetX-${index}" value="${fruit.offsetX ? (fruit.offsetX / NATIVE_SCALE) : 0}" 
+                               class="control-input" step="1" min="-100" max="100">
+                        <p class="text-xs text-gray-500 mt-1">Horizontal offset</p>
+                    </div>
+                    <div>
+                        <label class="control-label">Offset Y</label>
+                        <input type="number" id="offsetY-${index}" value="${fruit.offsetY ? (fruit.offsetY / NATIVE_SCALE) : 0}" 
+                               class="control-input" step="1" min="-100" max="100">
+                        <p class="text-xs text-gray-500 mt-1">Vertical offset</p>
+                    </div>
+                </div>
+                <div class="mt-3 text-xs text-gray-500">
+                    <p>Color: <span class="font-mono">${fruit.color}</span></p>
+                    <p>Score: ${fruit.score}</p>
+                </div>
+            `;
+            
+            // Add event listeners for inputs
+            card.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', () => {
+                    updateCanvas(index);
+                });
+            });
+            
+            // Initial render
+            setTimeout(() => updateCanvas(index), 0);
+            
+            return card;
+        }
+        
+        function updateCanvas(index) {
+            const canvas = document.getElementById(`canvas-${index}`);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const fruit = FRUITS[index];
+            const img = fruitImages[fruit.level];
+            
+            // Get current values from inputs
+            const baseRadius = parseFloat(document.getElementById(`baseRadius-${index}`).value) * currentNativeScale;
+            const radiusInput = document.getElementById(`radius-${index}`).value;
+            const radius = radiusInput ? parseFloat(radiusInput) * currentNativeScale : baseRadius;
+            const offsetX = parseFloat(document.getElementById(`offsetX-${index}`).value) * currentNativeScale;
+            const offsetY = parseFloat(document.getElementById(`offsetY-${index}`).value) * currentNativeScale;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Calculate scale to fit in canvas
+            const maxRadius = Math.max(baseRadius, radius) + Math.max(Math.abs(offsetX), Math.abs(offsetY));
+            const scale = (canvasSize * 0.4) / maxRadius;
+            
+            const centerX = canvasSize / 2;
+            const centerY = canvasSize / 2;
+            
+            // Draw fruit image (at visual position)
+            if (img && img.complete) {
+                const drawRadius = baseRadius * scale;
+                const containerSize = drawRadius * 2;
+                const imgAspect = img.width / img.height;
+                
+                let drawWidth, drawHeight;
+                if (imgAspect > 1) {
+                    drawWidth = containerSize;
+                    drawHeight = containerSize / imgAspect;
+                } else {
+                    drawHeight = containerSize;
+                    drawWidth = containerSize * imgAspect;
+                }
+                
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+                ctx.restore();
+            }
+            
+            // Draw collision circle (at collision body position)
+            if (showCollisionOutlines) {
+                const collisionX = centerX + (offsetX * scale);
+                const collisionY = centerY + (offsetY * scale);
+                const collisionRadius = radius * scale;
+                
+                ctx.save();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([10, 6]);
+                ctx.globalAlpha = 0.9;
+                ctx.beginPath();
+                ctx.arc(collisionX, collisionY, collisionRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+                
+                // Draw center point of collision body
+                ctx.save();
+                ctx.fillStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(collisionX, collisionY, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            
+            // Draw visual center point
+            ctx.save();
+            ctx.fillStyle = 'blue';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            // Draw legend
+            ctx.save();
+            ctx.font = '12px sans-serif';
+            ctx.fillStyle = '#374151';
+            ctx.fillText('Blue dot: Visual center', 10, canvasSize - 30);
+            if (showCollisionOutlines) {
+                ctx.fillText('Red dot: Collision center', 10, canvasSize - 15);
+            }
+            ctx.restore();
+        }
+        
+        function updateAllCanvases() {
+            FRUITS.forEach((fruit, index) => {
+                // Update canvas size
+                const canvas = document.getElementById(`canvas-${index}`);
+                if (canvas) {
+                    canvas.width = canvasSize;
+                    canvas.height = canvasSize;
+                }
+                updateCanvas(index);
+            });
+        }
+        
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+        
+        // Export functionality
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            const nativeScale = currentNativeScale;
+            const output = document.getElementById('exportOutput');
+            
+            let code = `const FRUITS = [\n`;
+            code += `    // PNG images only - sizes scaled ${nativeScale}x for higher resolution rendering\n`;
+            code += `    // baseRadius: visual size of the fruit for rendering\n`;
+            code += `    // radius: collision detection radius (defaults to baseRadius if not specified)\n`;
+            code += `    // offsetX, offsetY: offset of the collision body from the visual center (to account for leaves, stems, etc.)\n`;
+            
+            FRUITS.forEach((fruit, index) => {
+                const baseRadius = parseFloat(document.getElementById(`baseRadius-${index}`).value);
+                const radiusInput = document.getElementById(`radius-${index}`).value;
+                const radius = radiusInput ? parseFloat(radiusInput) : null;
+                const offsetX = parseFloat(document.getElementById(`offsetX-${index}`).value);
+                const offsetY = parseFloat(document.getElementById(`offsetY-${index}`).value);
+                
+                let line = `    { level: ${fruit.level}, baseRadius: ${baseRadius} * NATIVE_SCALE`;
+                
+                if (radius !== null && Math.abs(radius - baseRadius) > 0.01) {
+                    line += `, radius: ${radius.toFixed(2)} * NATIVE_SCALE`;
+                }
+                
+                if (Math.abs(offsetX) > 0.01 || Math.abs(offsetY) > 0.01) {
+                    line += `, offsetX: ${offsetX}`;
+                    if (Math.abs(offsetY) > 0.01) {
+                        line += `, offsetY: ${offsetY} * NATIVE_SCALE`;
+                    }
+                }
+                
+                line += `, color: '${fruit.color}', imagePath: '${fruit.imagePath}', score: ${fruit.score} }`;
+                
+                if (index < FRUITS.length - 1) {
+                    line += ',';
+                }
+                
+                code += line + '\n';
+            });
+            
+            code += `];`;
+            
+            output.textContent = code;
+        });
+        
+        // Copy to clipboard
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            const output = document.getElementById('exportOutput');
+            const text = output.textContent;
+            
+            if (text.includes('Click "Generate Export"')) {
+                alert('Please generate the export first!');
+                return;
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('copyBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                btn.classList.add('bg-gray-600', 'hover:bg-gray-700');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+                    btn.classList.add('bg-green-600', 'hover:bg-green-700');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard. Please select and copy manually.');
+            });
+        });
+    </script>
+</body>
+</html>
