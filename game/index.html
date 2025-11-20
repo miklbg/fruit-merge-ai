@@ -262,7 +262,8 @@
             justify-content: center;
             align-items: center;
             transition: opacity 0.3s ease, top 0.3s ease;
-            pointer-events: none;
+            pointer-events: auto;
+            cursor: help;
         }
         
         #booster-indicator.disabled {
@@ -274,6 +275,41 @@
             width: 24px;
             height: 24px;
             fill: white;
+        }
+        
+        #booster-tooltip {
+            position: absolute;
+            left: 56px; /* Position to the right of the indicator */
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+            max-width: 220px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 26;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+        
+        #booster-tooltip.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        #booster-tooltip::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+            border-right: 6px solid rgba(0, 0, 0, 0.9);
         }
     </style>
 </head>
@@ -352,6 +388,14 @@
                 </svg>
             </div>
             
+            <!-- Booster Tooltip -->
+            <div id="booster-tooltip">
+                <strong>Speed Booster</strong><br>
+                Drop a fruit, then quickly tap again within 0.2s to boost its speed 3x!<br><br>
+                <em>Unlocks at Lemon (Level 5)</em><br>
+                <em>5 drop cooldown after use</em>
+            </div>
+            
             <div id="preview-fruit"></div>
             <div id="game-canvas-wrapper"></div>
             <div id="confetti-container"></div>
@@ -425,6 +469,7 @@
             const restartConfirmNo = document.getElementById('restart-confirm-no');
             const fruitEvolutionRow = document.getElementById('fruit-evolution-row');
             const boosterIndicator = document.getElementById('booster-indicator');
+            const boosterTooltip = document.getElementById('booster-tooltip');
 
             // --- Matter.js modules ---
             const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Common } = Matter;
@@ -582,6 +627,39 @@
                 const gameOverLineViewportY = worldToViewportY(gameOverLineY);
                 const centerY = headerHeight + (gameOverLineViewportY / 2);
                 boosterIndicator.style.top = `${centerY}px`;
+                // Also update tooltip position to match
+                boosterTooltip.style.top = `${centerY}px`;
+            }
+            
+            // --- Toggle Booster Tooltip ---
+            function toggleBoosterTooltip(e) {
+                e.stopPropagation(); // Prevent event from bubbling
+                const isVisible = boosterTooltip.classList.contains('visible');
+                if (isVisible) {
+                    hideBoosterTooltip();
+                } else {
+                    showBoosterTooltip();
+                }
+            }
+            
+            function showBoosterTooltip() {
+                boosterTooltip.classList.add('visible');
+                // Add listener to hide tooltip when clicking outside
+                setTimeout(() => {
+                    document.addEventListener('click', hideBoosterTooltipOnClickOutside);
+                }, 0);
+            }
+            
+            function hideBoosterTooltip() {
+                boosterTooltip.classList.remove('visible');
+                document.removeEventListener('click', hideBoosterTooltipOnClickOutside);
+            }
+            
+            function hideBoosterTooltipOnClickOutside(e) {
+                // Check if click is outside both the indicator and tooltip
+                if (!boosterIndicator.contains(e.target) && !boosterTooltip.contains(e.target)) {
+                    hideBoosterTooltip();
+                }
             }
 
             // --- Audio System ---
@@ -1848,6 +1926,7 @@
                 resumeButton.addEventListener('click', togglePauseMenu);
                 musicToggle.addEventListener('click', toggleMusic);
                 soundsToggle.addEventListener('click', toggleSounds);
+                boosterIndicator.addEventListener('click', toggleBoosterTooltip);
             }
             
             // --- Helper to check if any modal is visible ---
@@ -1911,6 +1990,7 @@
                 
                 if (isHidden) {
                     // Show pause menu
+                    hideBoosterTooltip(); // Hide tooltip when opening pause menu
                     pauseModal.classList.remove('hidden');
                     // Update button text
                     if (localStorage.getItem(GAME_STATE_KEY) && !isGameOver) {
@@ -2080,6 +2160,9 @@
                 if (isGameOver) return; 
                 isGameOver = true;
                 
+                // Hide tooltip when game over occurs
+                hideBoosterTooltip();
+                
                 // Disable pointer events immediately after game over
                 gameWrapper.style.pointerEvents = 'none';
                 
@@ -2208,6 +2291,7 @@
                 document.addEventListener('visibilitychange', () => {
                     if (document.hidden) {
                         // Page lost focus/visibility
+                        hideBoosterTooltip(); // Hide tooltip when page loses focus
                         if (bgmController && bgmController.isPlaying()) {
                             bgmController.pause();
                             isMusicPaused = true;
@@ -2222,6 +2306,7 @@
                 
                 // Handle window focus/blur events (app switching)
                 window.addEventListener('blur', () => {
+                    hideBoosterTooltip(); // Hide tooltip when window loses focus
                     if (bgmController && bgmController.isPlaying()) {
                         bgmController.pause();
                         isMusicPaused = true;
