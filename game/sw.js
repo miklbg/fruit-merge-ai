@@ -64,9 +64,16 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME)
             .then(cache => {
               cache.put(event.request, responseToCache);
+            })
+            .catch(err => {
+              console.error('Failed to cache response:', err);
             });
           
           return response;
+        }).catch(err => {
+          console.error('Fetch failed:', err);
+          // Return a basic offline response or cached fallback
+          throw err;
         });
       })
   );
