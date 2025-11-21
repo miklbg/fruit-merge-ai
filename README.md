@@ -2,15 +2,18 @@
 
 A physics-based puzzle game where you drop and merge fruits to create larger fruits and score points!
 
+## 🎮 [PLAY NOW](https://miklbg.github.io/merge_game/) 🎮
+
+Click the button above to start playing instantly in your browser!
+
 ## 🎮 How to Play
 
-1. **Open** `game/index.html` in your web browser
-2. **Click** "Start" to begin playing
-3. **Drag** your mouse or finger to position the fruit
-4. **Click/Tap** to drop the fruit into the container
-5. **Merge** two identical fruits to create the next level fruit
-6. **Score** points with each merge - larger fruits give more points!
-7. **Game Over** when fruits stack above the red line
+1. **Click** "Start" to begin playing
+2. **Drag** your mouse or finger to position the fruit
+3. **Click/Tap** to drop the fruit into the container
+4. **Merge** two identical fruits to create the next level fruit
+5. **Score** points with each merge - larger fruits give more points!
+6. **Game Over** when fruits stack above the red line
 
 ## 🍓 Fruit Levels
 
@@ -62,24 +65,16 @@ Background music is sourced from Pixabay:
 ## 🛠️ Technical Details
 
 - **No Build Required**: Pure HTML/CSS/JavaScript - just open and play!
-- **Styling**: Tailwind CSS (pre-built and included locally)
-- **Physics**: Matter.js 0.19.0 (loaded via CDN)
+- **Styling**: Tailwind CSS
+- **Physics**: Matter.js
 - **Storage**: LocalStorage for game state and high scores
 - **Browser Compatibility**: Modern browsers with HTML5 Audio and Canvas support
 
-### Development
-
-If you need to rebuild the Tailwind CSS (e.g., after modifying styles):
-```bash
-npm install
-npm run build:css
-```
-
-## 🚀 Quick Start
+## 🚀 Running Locally
 
 Simply open `game/index.html` in your web browser - no installation or build process required!
 
-For local server testing:
+For local development with a server:
 ```bash
 cd game
 python3 -m http.server 8080
