@@ -50,16 +50,16 @@
             /* Use CSS Grid for clean vertical stacking */
             display: grid;
             grid-template-rows: auto 1fr auto;
-            grid-template-columns: 1fr;
+            /* Use min-content so grid column width is determined by narrowest content (canvas) */
+            grid-template-columns: min-content;
             
             /* Container sized based on viewport */
             height: 100vh;
             height: 100dvh;
             
-            /* Width set to match 2:3 aspect ratio of game area */
-            /* This ensures toolbars don't extend beyond game canvas width */
-            width: min(100vw, calc((100vh - 88px - 56px) * 2 / 3));
-            width: min(100dvw, calc((100dvh - 88px - 56px) * 2 / 3));
+            /* Width constrained to not exceed viewport */
+            max-width: 100vw;
+            max-width: 100dvw;
             
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             position: relative;
@@ -71,7 +71,6 @@
         #game-wrapper {
             /* Game area takes the middle grid row */
             position: relative;
-            width: 100%;
             height: 100%;
             overflow: hidden;
             background: #f3f4f6;
