@@ -25,6 +25,14 @@ const urlsToCache = [
   './manifest.json'
 ];
 
+// Helper function to check if response is valid for caching
+function isValidResponse(response) {
+  return response && 
+         response.status >= 200 && 
+         response.status < 300 && 
+         (response.type === 'basic' || response.type === 'cors');
+}
+
 // Install event - cache resources
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -53,17 +61,18 @@ self.addEventListener('fetch', event => {
         const fetchRequest = event.request.clone();
         
         return fetch(fetchRequest).then(response => {
-          // Check if valid response - allow both basic and cors types with successful status codes
-          if (!response || response.status < 200 || response.status >= 300 || (response.type !== 'basic' && response.type !== 'cors')) {
+          // Check if valid response for caching
+          if (!isValidResponse(response)) {
             return response;
           }
           
           // Clone the response
           const responseToCache = response.clone();
           
+          // Cache the response asynchronously
           caches.open(CACHE_NAME)
             .then(cache => {
-              cache.put(event.request, responseToCache);
+              return cache.put(event.request, responseToCache);
             })
             .catch(err => {
               console.error('Failed to cache response:', err);
