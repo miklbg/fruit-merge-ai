@@ -76,7 +76,7 @@
             pointer-events: auto;
             background-color: #69abde;
             padding: 16px 16px 0px 16px;
-            /* Fixed height for header - will be set via JavaScript to match canvas width */
+            /* Width will be set via JavaScript to match canvas width */
         }
         
         #preview-fruit {
@@ -856,6 +856,12 @@
             const gameOverLineY = gameWorldHeight * GAME_OVER_LINE_Y_PERCENT;
             const dropAreaY = gameWorldHeight * DROP_AREA_Y_PERCENT;
             const wallThickness = BASE_WALL_THICKNESS; 
+            
+            // --- Helper function to update element widths ---
+            function updateElementWidths(width) {
+                headerEl.style.width = `${width}px`;
+                fruitEvolutionRow.style.width = `${width}px`;
+            }
 
             // --- Initialize Fruit Evolution Row ---
             function initFruitEvolutionRow() {
@@ -1017,8 +1023,7 @@
                 confettiContainer.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
                 
                 // Set header and progression bar widths to match canvas width
-                headerEl.style.width = `${viewportWidth}px`;
-                fruitEvolutionRow.style.width = `${viewportWidth}px`;
+                updateElementWidths(viewportWidth);
 
                 currentPreviewX = gameWorldWidth / 2;
 
@@ -2155,8 +2160,7 @@
                 confettiContainer.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
                 
                 // Set header and progression bar widths to match canvas width
-                headerEl.style.width = `${viewportWidth}px`;
-                fruitEvolutionRow.style.width = `${viewportWidth}px`;
+                updateElementWidths(viewportWidth);
                 
                 // Update the canvas dimensions - keep at game world size, let CSS scale
                 if (render && render.canvas) {
