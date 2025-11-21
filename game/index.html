@@ -32,50 +32,57 @@
         }
         
         body {
+            margin: 0;
+            padding: 0;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 0;
+            background: #f3f4f6;
         }
 
         #game-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0;
-            /* Limit width to maintain reasonable aspect ratio for 2:3 game area plus evolution row */
-            /* In landscape, this ensures game doesn't get too wide */
-            width: 100%;
-            max-width: min(100vw, calc(100vh * 2 / 3));
-            max-width: min(100vw, calc(100dvh * 2 / 3));
-            /* Ensure the container fits within viewport height - use 100dvh for better mobile support */
-            max-height: 100vh;
-            max-height: 100dvh; /* Dynamic viewport height for mobile browsers */
+            /* Use CSS Grid for clean vertical stacking */
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            grid-template-columns: 1fr;
+            
+            /* Full viewport dimensions */
+            width: 100vw;
+            width: 100dvw;
             height: 100vh;
             height: 100dvh;
+            
+            /* Center on screen */
+            max-width: 100vw;
+            max-height: 100vh;
+            max-height: 100dvh;
+            
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        #game-wrapper {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            flex: 1 1 auto;
-            min-height: 0;
-            overflow: hidden;
             position: relative;
         }
 
+        #game-wrapper {
+            /* Game area takes the middle grid row */
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            
+            /* Center the game area horizontally */
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            background: #f3f4f6;
+        }
+
         #game-header {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
+            /* Header is first grid row - fixed height */
+            position: relative;
             z-index: 20;
             pointer-events: auto;
             background-color: #69abde;
-            padding: 16px 16px 0px 16px;
+            padding: 16px;
+            flex-shrink: 0;
         }
         
         #preview-fruit {
@@ -92,8 +99,15 @@
         }
 
         #game-canvas-wrapper {
+            /* Game canvas maintains 2:3 aspect ratio based on available height */
             position: absolute;
+            top: 0;
             bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: auto;
+            /* Width is calculated as: height * (2/3) to maintain 2:3 aspect ratio */
+            aspect-ratio: 2 / 3;
             z-index: 1;
             /* Replace gradient with world.png background that stretches to fit */
             background-image: url('assets/world.png');
@@ -122,6 +136,9 @@
         }
 
         #pause-modal {
+            /* Overlay spans all grid rows */
+            grid-row: 1 / -1;
+            grid-column: 1;
             transition: opacity 0.3s ease, transform 0.3s ease;
             pointer-events: auto;
         }
@@ -147,6 +164,20 @@
             pointer-events: none;
         }
         
+        #restart-confirm-modal {
+            /* Overlay spans all grid rows */
+            grid-row: 1 / -1;
+            grid-column: 1;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: auto;
+        }
+
+        #restart-confirm-modal.hidden {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+        }
+        
         #game-over-text {
             transition: opacity 0.5s ease;
             opacity: 0;
@@ -165,20 +196,12 @@
             opacity: 1;
         }
 
-        #restart-confirm-modal {
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            pointer-events: auto;
-        }
-
-        #restart-confirm-modal.hidden {
-            opacity: 0;
-            transform: scale(0.9);
-            pointer-events: none;
-        }
-
         #confetti-container {
             position: absolute;
-            bottom: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             pointer-events: none;
             overflow: hidden;
             z-index: 15; 
@@ -192,9 +215,10 @@
         }
         
         #fruit-evolution-row {
+            /* Evolution row is third grid row - fixed height */
             width: 100%;
             background-color: #7b9f2c;
-            padding: 0px 8px 8px 8px;
+            padding: 8px;
             /* Add safe area padding for iOS Safari at the bottom */
             padding-bottom: max(8px, env(safe-area-inset-bottom));
             display: flex;
@@ -307,43 +331,44 @@
 <body class="text-gray-800">
 
     <div id="game-container">
+        <!-- Header is first grid row -->
+        <div id="game-header" class="grid grid-cols-4 gap-2">
+            <!-- Burger Menu Icon (left aligned) -->
+            <div class="flex items-center justify-start">
+                <button id="burger-menu-button" class="p-2 bg-transparent hover:bg-orange-100 rounded-lg transition-all group" title="Menu" aria-label="Menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-600 group-hover:text-orange-700 transition-colors">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Score (centered) -->
+            <div class="text-center flex flex-col justify-center">
+                <span class="text-sm opacity-80">Score</span>
+                <div id="score" class="text-2xl font-bold">0</div>
+            </div>
+            
+            <!-- High Score (centered) -->
+            <div class="text-center flex flex-col justify-center">
+                <span class="text-sm opacity-80">High Score</span>
+                <div id="high-score" class="text-2xl font-bold">0</div>
+            </div>
+            
+            <!-- Next Fruit Icon (right aligned) -->
+            <div class="text-center flex flex-col justify-center items-end">
+                <span class="text-sm opacity-80">Next</span>
+                <div id="next-fruit" class="flex justify-center items-center h-9">
+                    <img id="next-fruit-img" src="" alt="Next fruit" class="max-h-9 max-w-9 object-contain" style="width: 24px; height: 24px;">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game area is second grid row -->
         <div id="game-wrapper">
             
             <div id="loading-screen">Loading...</div>
-
-            <!-- --- FIX: Bright header --- -->
-            <div id="game-header" class="grid grid-cols-4 gap-2">
-                <!-- Burger Menu Icon (left aligned) -->
-                <div class="flex items-center justify-start">
-                    <button id="burger-menu-button" class="p-2 bg-transparent hover:bg-orange-100 rounded-lg transition-all group" title="Menu" aria-label="Menu">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-600 group-hover:text-orange-700 transition-colors">
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
-                    </button>
-                </div>
-                
-                <!-- Score (centered) -->
-                <div class="text-center flex flex-col justify-center">
-                    <span class="text-sm opacity-80">Score</span>
-                    <div id="score" class="text-2xl font-bold">0</div>
-                </div>
-                
-                <!-- High Score (centered) -->
-                <div class="text-center flex flex-col justify-center">
-                    <span class="text-sm opacity-80">High Score</span>
-                    <div id="high-score" class="text-2xl font-bold">0</div>
-                </div>
-                
-                <!-- Next Fruit Icon (right aligned) -->
-                <div class="text-center flex flex-col justify-center items-end">
-                    <span class="text-sm opacity-80">Next</span>
-                    <div id="next-fruit" class="flex justify-center items-center h-9">
-                        <img id="next-fruit-img" src="" alt="Next fruit" class="max-h-9 max-w-9 object-contain" style="width: 24px; height: 24px;">
-                    </div>
-                </div>
-            </div>
             
             <!-- Booster Indicator -->
             <div id="booster-indicator" class="disabled">
@@ -377,6 +402,9 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Evolution row is third grid row -->
+        <div id="fruit-evolution-row"></div>
 
         <!-- Pause/Start Modal -->
         <div id="pause-modal" class="absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-30 flex flex-col justify-center items-center text-center p-8">
@@ -418,8 +446,6 @@
                 </button>
             </div>
         </div>
-
-        <div id="fruit-evolution-row"></div>
     </div>
 
     <script type="module">
@@ -567,8 +593,9 @@
             }
             
             function updateBoosterIndicatorPosition() {
+                // Position booster indicator in the middle of the game area above the red line
                 const gameOverLineViewportY = worldToViewportY(gameOverLineY);
-                const centerY = headerHeight + (gameOverLineViewportY / 2);
+                const centerY = gameOverLineViewportY / 2;
                 boosterIndicator.style.top = `${centerY}px`;
                 boosterTooltip.style.top = `${centerY}px`;
             }
@@ -985,34 +1012,13 @@
                 // Load achievements first
                 loadAchievements();
                 
-                // Calculate viewport dimensions to maintain 2:3 aspect ratio (matching game world)
+                // With CSS Grid and aspect-ratio, the canvas wrapper automatically maintains 2:3 ratio
+                // Just read the actual dimensions that CSS has set
+                viewportWidth = canvasWrapper.clientWidth;
+                viewportHeight = canvasWrapper.clientHeight;
                 headerHeight = headerEl.clientHeight;
-                const wrapperWidth = gameWrapper.clientWidth;
-                const wrapperHeight = gameWrapper.clientHeight;
-                const availableHeight = wrapperHeight - headerHeight;
                 
-                // Ensure viewport maintains 2:3 aspect ratio (same as game world 400:600)
-                // Calculate based on available space while maintaining aspect ratio
-                const aspectRatio = gameWorldWidth / gameWorldHeight; // 2/3
-                
-                if (wrapperWidth / availableHeight > aspectRatio) {
-                    // Width is the limiting factor
-                    viewportWidth = Math.floor(availableHeight * aspectRatio);
-                    viewportHeight = availableHeight;
-                } else {
-                    // Height is the limiting factor
-                    viewportWidth = wrapperWidth;
-                    viewportHeight = Math.floor(wrapperWidth / aspectRatio);
-                }
-                
-                canvasWrapper.style.top = `${headerHeight}px`;
-                canvasWrapper.style.height = `${viewportHeight}px`;
-                canvasWrapper.style.width = `${viewportWidth}px`;
-                canvasWrapper.style.left = `${(wrapperWidth - viewportWidth) / 2}px`; // Center if width is limited
-                confettiContainer.style.top = `${headerHeight}px`;
-                confettiContainer.style.height = `${viewportHeight}px`;
-                confettiContainer.style.width = `${viewportWidth}px`;
-                confettiContainer.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
+                // No manual positioning needed - CSS handles it all
 
                 currentPreviewX = gameWorldWidth / 2;
 
@@ -1406,7 +1412,7 @@
                 
                 // Convert game world dropAreaY to viewport coordinates
                 const viewportDropAreaY = worldToViewportY(dropAreaY);
-                previewFruitEl.style.top = `${headerHeight + viewportDropAreaY - viewportRadius}px`;
+                previewFruitEl.style.top = `${viewportDropAreaY - viewportRadius}px`;
 
                 moveFruit(currentPreviewX, true); 
             }
@@ -2116,37 +2122,21 @@
 
             // --- Handle Window Resize ---
             function handleResize(newWidth, newHeight) {
-                if (!newWidth || !newHeight || newWidth === viewportWidth) {
+                if (!newWidth || !newHeight) {
                     return;
                 }
                 
-                // Calculate viewport dimensions to maintain 2:3 aspect ratio (matching game world)
-                headerHeight = headerEl.clientHeight;
-                const wrapperWidth = newWidth;
-                const wrapperHeight = newHeight;
-                const availableHeight = wrapperHeight - headerHeight;
+                // With CSS Grid and aspect-ratio, just read the actual dimensions
+                const newViewportWidth = canvasWrapper.clientWidth;
+                const newViewportHeight = canvasWrapper.clientHeight;
                 
-                // Ensure viewport maintains 2:3 aspect ratio (same as game world 400:600)
-                const aspectRatio = gameWorldWidth / gameWorldHeight; // 2/3
-                
-                if (wrapperWidth / availableHeight > aspectRatio) {
-                    // Width is the limiting factor
-                    viewportWidth = Math.floor(availableHeight * aspectRatio);
-                    viewportHeight = availableHeight;
-                } else {
-                    // Height is the limiting factor
-                    viewportWidth = wrapperWidth;
-                    viewportHeight = Math.floor(wrapperWidth / aspectRatio);
+                if (newViewportWidth === viewportWidth && newViewportHeight === viewportHeight) {
+                    return; // No change
                 }
                 
-                canvasWrapper.style.top = `${headerHeight}px`;
-                canvasWrapper.style.height = `${viewportHeight}px`;
-                canvasWrapper.style.width = `${viewportWidth}px`;
-                canvasWrapper.style.left = `${(wrapperWidth - viewportWidth) / 2}px`; // Center if width is limited
-                confettiContainer.style.top = `${headerHeight}px`;
-                confettiContainer.style.height = `${viewportHeight}px`;
-                confettiContainer.style.width = `${viewportWidth}px`;
-                confettiContainer.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
+                viewportWidth = newViewportWidth;
+                viewportHeight = newViewportHeight;
+                headerHeight = headerEl.clientHeight;
                 
                 // Update the canvas dimensions - keep at game world size, let CSS scale
                 if (render && render.canvas) {
