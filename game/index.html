@@ -1998,6 +1998,16 @@
                 const gameUrl = 'https://miklbg.github.io/merge_game/';
                 const shareText = `I scored ${score} points in Fruit Merge! Can you beat my score? Play here: ${gameUrl}`;
                 
+                // Helper function to show temporary feedback
+                function showShareFeedback(message) {
+                    const shareTextSpan = shareButton.querySelector('span');
+                    const originalText = shareTextSpan.textContent;
+                    shareTextSpan.textContent = message;
+                    setTimeout(() => {
+                        shareTextSpan.textContent = originalText;
+                    }, 2000);
+                }
+                
                 // Try to use the Web Share API if available
                 if (navigator.share) {
                     navigator.share({
@@ -2012,20 +2022,10 @@
                     // Fallback: Copy to clipboard
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                         navigator.clipboard.writeText(shareText).then(() => {
-                            // Show temporary feedback that text was copied
-                            const originalText = shareButton.querySelector('span').textContent;
-                            shareButton.querySelector('span').textContent = 'Copied!';
-                            setTimeout(() => {
-                                shareButton.querySelector('span').textContent = originalText;
-                            }, 2000);
+                            showShareFeedback('Copied!');
                         }).catch((error) => {
                             console.error('Failed to copy to clipboard:', error);
-                            // Show error feedback
-                            const originalText = shareButton.querySelector('span').textContent;
-                            shareButton.querySelector('span').textContent = 'Failed to copy';
-                            setTimeout(() => {
-                                shareButton.querySelector('span').textContent = originalText;
-                            }, 2000);
+                            showShareFeedback('Failed to copy');
                         });
                     } else {
                         // Last resort: alert with the text to copy
