@@ -70,12 +70,13 @@
         #game-header {
             position: absolute;
             top: 0;
-            left: 0;
-            right: 0;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 20;
             pointer-events: auto;
             background-color: #69abde;
             padding: 16px 16px 0px 16px;
+            /* Fixed height for header - will be set via JavaScript to match canvas width */
         }
         
         #preview-fruit {
@@ -192,7 +193,6 @@
         }
         
         #fruit-evolution-row {
-            width: 100%;
             background-color: #7b9f2c;
             padding: 0px 8px 8px 8px;
             /* Add safe area padding for iOS Safari at the bottom */
@@ -206,6 +206,8 @@
             overflow-y: hidden;
             pointer-events: none;
             flex-shrink: 0;
+            /* Width will be set via JavaScript to match canvas width */
+            margin: 0 auto;
         }
         
         .evolution-fruit {
@@ -1013,6 +1015,10 @@
                 confettiContainer.style.height = `${viewportHeight}px`;
                 confettiContainer.style.width = `${viewportWidth}px`;
                 confettiContainer.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
+                
+                // Set header and progression bar widths to match canvas width
+                headerEl.style.width = `${viewportWidth}px`;
+                fruitEvolutionRow.style.width = `${viewportWidth}px`;
 
                 currentPreviewX = gameWorldWidth / 2;
 
@@ -2147,6 +2153,10 @@
                 confettiContainer.style.height = `${viewportHeight}px`;
                 confettiContainer.style.width = `${viewportWidth}px`;
                 confettiContainer.style.left = `${(wrapperWidth - viewportWidth) / 2}px`;
+                
+                // Set header and progression bar widths to match canvas width
+                headerEl.style.width = `${viewportWidth}px`;
+                fruitEvolutionRow.style.width = `${viewportWidth}px`;
                 
                 // Update the canvas dimensions - keep at game world size, let CSS scale
                 if (render && render.canvas) {
