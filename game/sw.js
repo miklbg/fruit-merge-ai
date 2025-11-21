@@ -6,6 +6,7 @@ const urlsToCache = [
   './matter.min.js',
   './audio/web-audio-bgm.js',
   './assets/icon.png',
+  './assets/world.png',
   './assets/1-blueberry.png',
   './assets/2-strawberry.png',
   './assets/3-lemon.png',
