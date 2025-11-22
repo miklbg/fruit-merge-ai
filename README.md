@@ -23,10 +23,6 @@ A physics-based puzzle game where you drop and merge fruits to create larger fru
 - **Audio**: Sound effects and background music
 - **Progressive Web App**: Installable with offline support
 
-## Running Locally
-
-Simply open `game/index.html` in your web browser - no installation or build process required!
-
 ## License
 
 MIT License - See LICENSE file for details.
