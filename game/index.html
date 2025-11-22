@@ -70,6 +70,7 @@
             */
             height: 100vh;
             width: calc((100vh - var(--fixed-rows-total)) * var(--aspect-ratio));
+            max-width: 100vw; /* Ensure container never exceeds viewport width on iOS Safari */
             
             margin: 0 auto; /* Centers the container */
             display: flex;
