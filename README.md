@@ -6,9 +6,8 @@ A physics-based puzzle game where you drop and merge fruits to create larger fru
 
 ## 🎮 [PLAY NOW](https://miklbg.github.io/merge_game/) 🎮
 
-</div>
-
 <img src="screenshot.jpg" alt="Game Screenshot" width="400">
+</div>
 
 ## How to Play
 
