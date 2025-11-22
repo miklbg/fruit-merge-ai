@@ -549,6 +549,8 @@
             const HIGHSCORE_KEY = 'fruit-merge-highscore';
             const GAME_STATE_KEY = 'fruit-merge-gamestate';
             const ACHIEVEMENTS_KEY = 'fruit-merge-achievements';
+            const MUSIC_ENABLED_KEY = 'fruit-merge-music-enabled';
+            const SOUNDS_ENABLED_KEY = 'fruit-merge-sounds-enabled';
             
             const fruitImages = {};
             const imageLoadPromises = [];
@@ -663,6 +665,25 @@
             let areSoundsEnabled = true;
             let isMusicPaused = false;
             let musicFadeInterval = null;
+
+            // --- Load Audio Preferences ---
+            function loadAudioPreferences() {
+                const savedMusicEnabled = localStorage.getItem(MUSIC_ENABLED_KEY);
+                const savedSoundsEnabled = localStorage.getItem(SOUNDS_ENABLED_KEY);
+                
+                if (savedMusicEnabled !== null) {
+                    isMusicEnabled = savedMusicEnabled === 'true';
+                }
+                if (savedSoundsEnabled !== null) {
+                    areSoundsEnabled = savedSoundsEnabled === 'true';
+                }
+            }
+            
+            // --- Save Audio Preferences ---
+            function saveAudioPreferences() {
+                localStorage.setItem(MUSIC_ENABLED_KEY, isMusicEnabled.toString());
+                localStorage.setItem(SOUNDS_ENABLED_KEY, areSoundsEnabled.toString());
+            }
 
             function initAudioContext() {
                 if (!audioContext) {
@@ -1028,6 +1049,7 @@
                 if (w > 0 && h > 0 && hh > 0) {
                     clearInterval(layoutCheckInterval);
                     loadingScreen.style.display = 'none';
+                    loadAudioPreferences(); // Load audio preferences first
                     initGame(); 
                     setupResizeObserver();
                     setupVisibilityHandlers();
@@ -1174,14 +1196,6 @@
                     });
                     score = loadedState.score;
 
-                    // Restore audio preferences from saved state
-                    if (loadedState.isMusicEnabled !== undefined) {
-                        isMusicEnabled = loadedState.isMusicEnabled;
-                    }
-                    if (loadedState.areSoundsEnabled !== undefined) {
-                        areSoundsEnabled = loadedState.areSoundsEnabled;
-                    }
-                    
                     // Restore booster cooldown state
                     if (loadedState.boosterCooldownCount !== undefined) {
                         boosterCooldownCount = loadedState.boosterCooldownCount;
@@ -1661,8 +1675,6 @@
                     currentFruitLevel: currentFruitLevel,
                     nextFruitLevel: nextFruitLevel,
                     // No need to save boxWidth anymore - game world is fixed size
-                    isMusicEnabled: isMusicEnabled, // Save music preference
-                    areSoundsEnabled: areSoundsEnabled, // Save sounds preference
                     boosterCooldownCount: boosterCooldownCount, // Save booster cooldown state
                     boosterUnlocked: boosterUnlocked, // Save booster unlock state
                     timestamp: Date.now() // Save timestamp for auto-resume feature
@@ -1963,6 +1975,9 @@
                 isMusicEnabled = !isMusicEnabled;
                 musicStatus.textContent = isMusicEnabled ? 'On' : 'Off';
                 
+                // Save preference to localStorage
+                saveAudioPreferences();
+                
                 if (isMusicEnabled) {
                     // Enable music - start playing if not in pause menu and not game over
                     if (pauseModal.classList.contains('hidden') && !isGameOver) {
@@ -1980,6 +1995,9 @@
             function toggleSounds() {
                 areSoundsEnabled = !areSoundsEnabled;
                 soundsStatus.textContent = areSoundsEnabled ? 'On' : 'Off';
+                
+                // Save preference to localStorage
+                saveAudioPreferences();
             }
             
             // --- Restart from Pause Menu ---
