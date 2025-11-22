@@ -153,28 +153,4 @@ self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
-    event.waitUntil(
-      caches.keys().then(cacheNames => {
-        return Promise.all(
-          cacheNames.map(cacheName => {
-            console.log('Clearing cache:', cacheName);
-            return caches.delete(cacheName);
-          })
-        );
-      }).then(() => {
-        // Notify the client that cache is cleared
-        if (event.ports && event.ports[0]) {
-          event.ports[0].postMessage({ success: true });
-        }
-      }).catch(err => {
-        console.error('Failed to clear cache:', err);
-        // Notify the client about the error
-        if (event.ports && event.ports[0]) {
-          event.ports[0].postMessage({ success: false, error: err.message });
-        }
-      })
-    );
-  }
 });

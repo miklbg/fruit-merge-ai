@@ -468,9 +468,6 @@
                         <span id="sounds-status">On</span>
                     </button>
                 </div>
-                <button id="clear-cache-button" class="px-4 py-2 bg-purple-500 text-white font-bold rounded-lg shadow-lg text-sm hover:bg-purple-400 transition-all">
-                    Clear Cache & Reload
-                </button>
             </div>
         </div>
 
@@ -512,7 +509,6 @@
             const musicStatus = document.getElementById('music-status');
             const soundsToggle = document.getElementById('sounds-toggle');
             const soundsStatus = document.getElementById('sounds-status');
-            const clearCacheButton = document.getElementById('clear-cache-button');
             
             const scoreEl = document.getElementById('score');
             const highScoreEl = document.getElementById('high-score');
@@ -1889,7 +1885,6 @@
                 resumeButton.addEventListener('click', togglePauseMenu);
                 musicToggle.addEventListener('click', toggleMusic);
                 soundsToggle.addEventListener('click', toggleSounds);
-                clearCacheButton.addEventListener('click', handleClearCache);
                 boosterIndicator.addEventListener('click', toggleBoosterTooltip);
             }
             
@@ -2015,48 +2010,6 @@
                 saveAudioPreferences();
             }
             
-            // --- Clear Cache and Reload ---
-            function handleClearCache() {
-                if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
-                    // No service worker, just reload
-                    window.location.reload();
-                    return;
-                }
-                
-                // Show loading feedback
-                const originalText = clearCacheButton.textContent;
-                clearCacheButton.textContent = 'Clearing...';
-                clearCacheButton.disabled = true;
-                
-                // Create a message channel to receive response
-                const messageChannel = new MessageChannel();
-                
-                // Add timeout to prevent indefinite waiting
-                const timeout = setTimeout(() => {
-                    clearCacheButton.textContent = originalText;
-                    clearCacheButton.disabled = false;
-                    window.location.reload();
-                }, 10000); // 10 second timeout
-                
-                messageChannel.port1.onmessage = (event) => {
-                    clearTimeout(timeout);
-                    if (event.data.success) {
-                        // Cache cleared, now reload the page
-                        window.location.reload();
-                    } else {
-                        // Failed to clear cache, still try to reload
-                        clearCacheButton.textContent = originalText;
-                        clearCacheButton.disabled = false;
-                        window.location.reload();
-                    }
-                };
-                
-                // Send message to service worker to clear cache
-                navigator.serviceWorker.controller.postMessage(
-                    { type: 'CLEAR_CACHE' },
-                    [messageChannel.port2]
-                );
-            }
             
             // --- Restart from Pause Menu ---
             function handleRestartFromMenu() {
@@ -2184,7 +2137,6 @@
                 resumeButton.removeEventListener('click', togglePauseMenu);
                 musicToggle.removeEventListener('click', toggleMusic);
                 soundsToggle.removeEventListener('click', toggleSounds);
-                clearCacheButton.removeEventListener('click', handleClearCache);
                 Events.off(engine);
                 Events.off(render);
                 World.clear(world, false);
@@ -2459,7 +2411,7 @@
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                     // New service worker available
-                                    console.log('New content is available, use "Clear Cache & Reload" to update');
+                                    console.log('New content is available, refresh the page to update');
                                     
                                     // Automatically activate the new service worker
                                     newWorker.postMessage({ type: 'SKIP_WAITING' });
