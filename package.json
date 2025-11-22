@@ -1,0 +1,23 @@
+{
+  "name": "merge_game",
+  "version": "1.0.0",
+  "description": "A physics-based puzzle game where you drop and merge fruits to create larger fruits and score points!",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "build:css": "tailwindcss -i ./tailwind.css -o ./game/css/tailwind.min.css --minify",
+    "watch:css": "tailwindcss -i ./tailwind.css -o ./game/css/tailwind.min.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.18"
+  },
+  "dependencies": {
+    "matter-js": "^0.20.0"
+  }
+}
