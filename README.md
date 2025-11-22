@@ -2,7 +2,13 @@
 
 A physics-based puzzle game where you drop and merge fruits to create larger fruits and score points!
 
+<div align="center">
+
 ## 🎮 [PLAY NOW](https://miklbg.github.io/merge_game/) 🎮
+
+</div>
+
+![Game Screenshot](screenshot.jpg)
 
 ## How to Play
 
