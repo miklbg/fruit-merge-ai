@@ -8,7 +8,7 @@ A physics-based puzzle game where you drop and merge fruits to create larger fru
 
 </div>
 
-![Game Screenshot](screenshot.jpg)
+<img src="screenshot.jpg" alt="Game Screenshot" width="400">
 
 ## How to Play
 
