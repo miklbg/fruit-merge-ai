@@ -556,6 +556,7 @@
             const GAME_OVER_LINE_Y_PERCENT = 0.18; 
             const DROP_AREA_Y_PERCENT = 0.1; 
             const BASE_WALL_THICKNESS = 40 * NATIVE_SCALE;
+            const GROUND_HEIGHT = 48 * NATIVE_SCALE; // 20% taller than walls (matches world.png: 120px vs 100px)
             const DROP_COOLDOWN_MS = 400;
             const HIGHSCORE_KEY = 'fruit-merge-highscore';
             const GAME_STATE_KEY = 'fruit-merge-gamestate';
@@ -1155,7 +1156,7 @@
                 const wallCenterY = gameOverLineY + wallHeight / 2;
                 
                 World.add(world, [
-                    Bodies.rectangle(gameWorldWidth / 2, gameWorldHeight - wallThickness / 2, gameWorldWidth, wallThickness, { ...wallOptions, label: 'ground' }),
+                    Bodies.rectangle(gameWorldWidth / 2, gameWorldHeight - GROUND_HEIGHT / 2, gameWorldWidth, GROUND_HEIGHT, { ...wallOptions, label: 'ground' }),
                     Bodies.rectangle(wallThickness / 2, wallCenterY, wallThickness, wallHeight, { ...wallOptions, label: 'wall-left' }),
                     Bodies.rectangle(gameWorldWidth - wallThickness / 2, wallCenterY, wallThickness, wallHeight, { ...wallOptions, label: 'wall-right' })
                 ]);
