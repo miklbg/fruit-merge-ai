@@ -138,18 +138,18 @@ self.addEventListener('activate', event => {
           })
         );
       });
+    }).then(() => {
+      // Notify all clients that a new version is active
+      return self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'SW_UPDATED',
+            version: VERSION
+          });
+        });
+      });
     })
   );
-  
-  // Notify all clients that a new version is active
-  self.clients.matchAll().then(clients => {
-    clients.forEach(client => {
-      client.postMessage({
-        type: 'SW_UPDATED',
-        version: VERSION
-      });
-    });
-  });
 });
 
 // Message handler for manual updates
@@ -169,7 +169,15 @@ self.addEventListener('message', event => {
         );
       }).then(() => {
         // Notify the client that cache is cleared
-        event.ports[0].postMessage({ success: true });
+        if (event.ports && event.ports[0]) {
+          event.ports[0].postMessage({ success: true });
+        }
+      }).catch(err => {
+        console.error('Failed to clear cache:', err);
+        // Notify the client about the error
+        if (event.ports && event.ports[0]) {
+          event.ports[0].postMessage({ success: false, error: err.message });
+        }
       })
     );
   }

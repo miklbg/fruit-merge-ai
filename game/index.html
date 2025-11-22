@@ -2016,7 +2016,7 @@
             function handleClearCache() {
                 if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
                     // No service worker, just reload
-                    window.location.reload(true);
+                    window.location.reload();
                     return;
                 }
                 
@@ -2028,15 +2028,23 @@
                 // Create a message channel to receive response
                 const messageChannel = new MessageChannel();
                 
+                // Add timeout to prevent indefinite waiting
+                const timeout = setTimeout(() => {
+                    clearCacheButton.textContent = originalText;
+                    clearCacheButton.disabled = false;
+                    window.location.reload();
+                }, 10000); // 10 second timeout
+                
                 messageChannel.port1.onmessage = (event) => {
+                    clearTimeout(timeout);
                     if (event.data.success) {
                         // Cache cleared, now reload the page
-                        window.location.reload(true);
+                        window.location.reload();
                     } else {
                         // Failed to clear cache, still try to reload
                         clearCacheButton.textContent = originalText;
                         clearCacheButton.disabled = false;
-                        window.location.reload(true);
+                        window.location.reload();
                     }
                 };
                 
