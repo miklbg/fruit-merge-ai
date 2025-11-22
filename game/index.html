@@ -73,8 +73,12 @@
                Fixed rows total = var(--header-height) + var(--footer-height) = var(--fixed-rows-total)
                Aspect Ratio = var(--aspect-ratio)
             */
+            /* Use 100dvh (dynamic viewport height) to respect actual visible viewport excluding browser UI */
+            /* Fallback to 100vh for older browsers */
             height: 100vh;
+            height: 100dvh;
             width: calc((100vh - var(--fixed-rows-total)) * var(--aspect-ratio));
+            width: calc((100dvh - var(--fixed-rows-total)) * var(--aspect-ratio));
             max-width: 100vw; /* Ensure container never exceeds viewport width on iOS Safari */
             
             margin: 0 auto; /* Centers the container */
