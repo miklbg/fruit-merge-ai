@@ -626,6 +626,7 @@
             let boosterUnlocked = false;
             const BOOSTER_UNLOCK_LEVEL = 5;
             let boosterReenableTimeout = null;
+            let isGameOverAnimating = false; // Flag to prevent actions during game over animation
             
             function updateBoosterIndicator() {
                 if (!boosterUnlocked) {
@@ -1089,6 +1090,7 @@
 
                 isGameOver = false;
                 isDropping = false;
+                isGameOverAnimating = false; // Reset animation flag
                 lastDropTime = 0; // Reset drop time on new game
                 lastDroppedFruit = null; // Reset last dropped fruit reference
                 saveCounter = 0;
@@ -1902,17 +1904,17 @@
             
             // --- Event Handlers (to allow removal) ---
             function handlePointerDown(e) { 
-                if (isGameOver || isModalVisible()) return;
+                if (isGameOver || isGameOverAnimating || isModalVisible()) return;
                 e.preventDefault(); 
                 moveFruit(e.clientX); 
             }
             function handlePointerMove(e) { 
-                if (isGameOver || isModalVisible()) return;
+                if (isGameOver || isGameOverAnimating || isModalVisible()) return;
                 e.preventDefault(); 
                 moveFruit(e.clientX); 
             }
             function handlePointerUp(e) { 
-                if (isGameOver || isModalVisible()) return;
+                if (isGameOver || isGameOverAnimating || isModalVisible()) return;
                 e.preventDefault(); 
                 
                 const currentTime = Date.now();
@@ -2123,6 +2125,11 @@
             }
             
             function handleRestart() {
+                // Prevent restart during game over animation
+                if (isGameOverAnimating) {
+                    return;
+                }
+                
                 localStorage.removeItem(GAME_STATE_KEY);
                 
                 // Reset game over modal visibility states
@@ -2154,6 +2161,9 @@
                 // Clear all game over timeouts if they exist
                 gameOverTimeouts.forEach(timeout => clearTimeout(timeout));
                 gameOverTimeouts = [];
+                
+                // Clear the game over animation flag
+                isGameOverAnimating = false;
                 
                 // Clear booster reenable timeout if it exists
                 if (boosterReenableTimeout) {
@@ -2221,11 +2231,12 @@
             function triggerGameOver() {
                 if (isGameOver) return; 
                 isGameOver = true;
+                isGameOverAnimating = true; // Set animation flag to block all interactions
                 
                 // Hide tooltip when game over occurs
                 hideBoosterTooltip();
                 
-                // Disable pointer events immediately after game over
+                // Disable pointer events immediately to prevent any interactions during animation
                 gameWrapper.style.pointerEvents = 'none';
                 
                 // Play game over sound effect
@@ -2258,7 +2269,9 @@
                     // Fade in the modal background, score, and restart button
                     gameOverContent.classList.add('visible');
                     
-                    // Re-enable pointer events when restart button becomes visible
+                    // Re-enable pointer events and clear animation flag ONLY after content is visible
+                    // This ensures the restart button can be clicked only when fully shown
+                    isGameOverAnimating = false;
                     gameWrapper.style.pointerEvents = 'auto';
                 }, 2000));
                 
