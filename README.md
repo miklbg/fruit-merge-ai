@@ -2,7 +2,7 @@
 
 ### A delightful physics-based puzzle game where you drop and merge fruits to score points!
 
-**Fruit Merge** is an casual puzzle game that combines physics simulation with strategic gameplay.
+**Fruit Merge** is a casual puzzle game that combines physics simulation with strategic gameplay.
 
 Drop fruits into the container, match identical ones to merge them into bigger fruits, and chase the ultimate goal: creating a watermelon! 🍉
 
