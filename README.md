@@ -7,12 +7,12 @@
 Drop fruits into the container, match identical ones to merge them into bigger fruits, and chase the ultimate goal: creating a watermelon! 🍉
 
 <div align="center">
+<br>
 
 [![Static Badge](https://img.shields.io/badge/Play_Now-success?style=for-the-badge&logo=rocket)](https://miklbg.github.io/merge_game/)
 
-</div>
-
 <br>
+</div>
 
 <img src="screenshot.jpg" alt="Game Screenshot" width="350" align="right">
 
