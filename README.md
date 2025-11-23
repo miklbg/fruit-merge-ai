@@ -1,19 +1,27 @@
 # Fruit Merge Game
 
+<img src="screenshot.jpg" alt="Game Screenshot" width="400" align="right">
+
 ### A delightful physics-based puzzle game where you drop and merge fruits to score points!
+
+
 
 **Fruit Merge** is an casual puzzle game that combines physics simulation with strategic gameplay.
 
 Drop fruits into the container, match identical ones to merge them into bigger fruits, and chase the ultimate goal: creating a watermelon! 🍉
 
+<br>
+
 <div align="center">
 
 [![Static Badge](https://img.shields.io/badge/Play_Now-success?style=for-the-badge&logo=rocket)](https://miklbg.github.io/merge_game/)
 
-<img src="screenshot.jpg" alt="Game Screenshot" width="400">
 </div>
 
-## How to Play
+
+
+
+### How to Play
 
 1. Click **Start** to begin playing
 2. Drag to position the fruit
@@ -22,7 +30,7 @@ Drop fruits into the container, match identical ones to merge them into bigger f
 5. Score points with each merge - larger fruits give more points!
 6. Game over when fruits stack above the red line
 
-## Features
+### Features
 
 - **10 Fruit Levels**: Progress from blueberry to watermelon
 - **Physics-Based Gameplay**: Realistic fruit physics powered by Matter.js
@@ -32,14 +40,14 @@ Drop fruits into the container, match identical ones to merge them into bigger f
 - **Audio**: Sound effects and background music
 - **Progressive Web App**: Installable with offline support
 
-## 🙏 Acknowledgments
+### 🙏 Acknowledgments
 
 - Physics simulation powered by [Matter.js](https://brm.io/matter-js/)
 - Music [Children Music Loop - Creative Fun](https://pixabay.com/music/happy-childrens-tunes-children-music-loop-creative-fun-262427/) by Sonican via Pixabay. License: Pixabay Content License
 - Game logic and assets generated using Copilot, ChatGPT and Gemini.
 - Inspired by classic merge-style puzzle games
 
-## License
+### License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
