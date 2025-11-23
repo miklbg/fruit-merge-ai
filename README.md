@@ -1,6 +1,6 @@
 # Fruit Merge Game
 
-<img src="screenshot.jpg" alt="Game Screenshot" width="300" align="right">
+<img src="screenshot.jpg" alt="Game Screenshot" width="350" align="right">
 
 ### A delightful physics-based puzzle game where you drop and merge fruits to score points!
 
