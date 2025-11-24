@@ -2153,7 +2153,9 @@
             
             // --- Highscore Functions ---
             function showHighscoreSubmitModal() {
-                highscoreSubmitScore.textContent = score;
+                // Get the score from finalScoreEl to ensure it's always correct
+                const currentScore = parseInt(finalScoreEl.textContent) || score;
+                highscoreSubmitScore.textContent = currentScore;
                 highscoreNameInput.value = '';
                 highscoreSubmitMessage.textContent = '';
                 highscoreSubmitMessage.className = 'text-sm mb-4 min-h-6';
@@ -2168,6 +2170,7 @@
             
             async function handleHighscoreSubmit() {
                 const name = highscoreNameInput.value.trim();
+                const currentScore = parseInt(highscoreSubmitScore.textContent) || score;
                 
                 // Validate name
                 if (!name) {
@@ -2189,7 +2192,7 @@
                 
                 try {
                     // Submit the highscore
-                    const success = await submitHighscore(name, score);
+                    const success = await submitHighscore(name, currentScore);
                     
                     if (success) {
                         highscoreSubmitMessage.textContent = '✓ Submitted successfully!';
