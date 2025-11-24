@@ -47,6 +47,19 @@ export async function fetchGlobalHighscores() {
  * @returns {Promise<boolean>} True if submission was successful
  */
 export async function submitHighscore(name, score) {
+    // Helper function to process and save highscores
+    async function saveToLocalStorage(highscores, name, score) {
+        highscores.push({
+            name: name.trim(),
+            score: score,
+            date: new Date().toISOString()
+        });
+        highscores.sort((a, b) => b.score - a.score);
+        const topScores = highscores.slice(0, MAX_HIGHSCORES);
+        localStorage.setItem('global-highscores', JSON.stringify(topScores));
+        return topScores;
+    }
+    
     try {
         // Fetch current highscores
         const highscores = await fetchGlobalHighscores();
@@ -87,14 +100,7 @@ export async function submitHighscore(name, score) {
         // Fallback to localStorage only if API fails
         try {
             const highscores = await fetchGlobalHighscores();
-            highscores.push({
-                name: name.trim(),
-                score: score,
-                date: new Date().toISOString()
-            });
-            highscores.sort((a, b) => b.score - a.score);
-            const topScores = highscores.slice(0, MAX_HIGHSCORES);
-            localStorage.setItem('global-highscores', JSON.stringify(topScores));
+            await saveToLocalStorage(highscores, name, score);
             return true;
         } catch (fallbackError) {
             console.error('Error in fallback submission:', fallbackError);
