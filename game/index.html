@@ -414,17 +414,23 @@
             <div id="game-canvas-wrapper"></div>
             <div id="confetti-container"></div>
 
-            <!-- --- FIX: Bright game over modal --- -->
+            <!-- Game Over Results Screen -->
             <div id="game-over-modal" class="hidden absolute inset-0 z-20 flex flex-col justify-center items-center text-center p-8">
                 <h2 id="game-over-text" class="text-5xl font-bold text-red-500 mb-4">Game Over</h2>
-                <div id="game-over-content" class="bg-white text-gray-900 rounded-lg p-8 flex flex-col items-center shadow-2xl">
-                    <p class="text-xl mb-2">Final Score:</p>
-                    <div id="final-score" class="text-4xl font-bold mb-8">0</div>
-                    <!-- --- FIX: Playful button color --- -->
-                    <div class="flex gap-3 flex-col w-full max-w-xs">
-                        <button id="restart-button" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-green-400 transition-all">
-                            Restart
-                        </button>
+                <div id="game-over-content" class="bg-white text-gray-900 rounded-lg p-8 flex flex-col items-center shadow-2xl max-w-md w-full">
+                    <p class="text-xl mb-2 font-semibold">Your Score</p>
+                    <div id="final-score" class="text-5xl font-bold mb-6 text-purple-600">0</div>
+                    
+                    <!-- Leaderboard Section -->
+                    <div class="w-full mb-6">
+                        <h3 class="text-2xl font-bold text-purple-600 mb-4">🏆 Top 10</h3>
+                        <div id="game-over-leaderboard" class="w-full max-h-64 overflow-y-auto">
+                            <div class="text-gray-500">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Buttons -->
+                    <div class="flex gap-3 flex-col w-full">
                         <button id="share-button" class="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-blue-400 transition-all flex items-center justify-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="18" cy="5" r="3"></circle>
@@ -433,7 +439,10 @@
                                 <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
                                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                             </svg>
-                            <span>Share Score</span>
+                            <span>Share Result</span>
+                        </button>
+                        <button id="restart-button" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-green-400 transition-all">
+                            Restart
                         </button>
                     </div>
                 </div>
@@ -483,11 +492,39 @@
                 </button>
             </div>
         </div>
+
+        <!-- Highscore Submission Modal -->
+        <div id="highscore-submit-modal" class="hidden absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-50 flex flex-col justify-center items-center text-center p-8">
+            <div class="bg-white text-gray-900 rounded-lg p-8 flex flex-col items-center shadow-2xl max-w-md w-full">
+                <h2 class="text-3xl font-bold text-yellow-600 mb-2">🏆 Top 10!</h2>
+                <p class="text-lg mb-1">Congratulations! Your score:</p>
+                <div id="highscore-submit-score" class="text-4xl font-bold text-yellow-600 mb-4">0</div>
+                <p class="text-md mb-4">Enter your name for the leaderboard:</p>
+                <input 
+                    type="text" 
+                    id="highscore-name-input" 
+                    placeholder="Your Name" 
+                    maxlength="20"
+                    class="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-yellow-500 text-center"
+                />
+                <div id="highscore-submit-message" class="text-sm mb-4 min-h-6"></div>
+                <div class="flex gap-3 w-full">
+                    <button id="highscore-submit-confirm" class="flex-1 px-6 py-3 bg-yellow-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-yellow-400 transition-all">
+                        Submit
+                    </button>
+                    <button id="highscore-submit-cancel" class="flex-1 px-6 py-3 bg-gray-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-gray-400 transition-all">
+                        Skip
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module">
         // Import Web Audio BGM controller
         import { createBgmController } from './audio/web-audio-bgm.js';
+        // Import highscore functions
+        import { fetchGlobalHighscores, submitHighscore, qualifiesForTop10 } from './highscores.js';
 
         // Wait for the *entire page* to load
         window.onload = () => {
@@ -525,6 +562,15 @@
             const fruitEvolutionRow = document.getElementById('fruit-evolution-row');
             const boosterIndicator = document.getElementById('booster-indicator');
             const boosterTooltip = document.getElementById('booster-tooltip');
+            
+            // Highscore elements
+            const highscoreSubmitModal = document.getElementById('highscore-submit-modal');
+            const highscoreSubmitScore = document.getElementById('highscore-submit-score');
+            const highscoreNameInput = document.getElementById('highscore-name-input');
+            const highscoreSubmitMessage = document.getElementById('highscore-submit-message');
+            const highscoreSubmitConfirm = document.getElementById('highscore-submit-confirm');
+            const highscoreSubmitCancel = document.getElementById('highscore-submit-cancel');
+            const gameOverLeaderboard = document.getElementById('game-over-leaderboard');
 
             // --- Matter.js modules ---
             const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Common } = Matter;
@@ -603,6 +649,8 @@
             let saveCounter = 0; 
             let achievedFruits = new Set();
             let currentGameMaxFruit = -1;
+            let lastSubmittedName = ''; // Track last submitted highscore name
+            let lastSubmittedScore = 0; // Track last submitted highscore score
             
             let bodiesToRemoveSet = new Set();
             let bodiesToAddArray = [];
@@ -1104,6 +1152,8 @@
                 warningLineThickness = 2;
                 warningAnimationFrame = 0;
                 lastWarningSound = 0;
+                
+                // Don't reset lastSubmittedName and lastSubmittedScore - keep them for leaderboard highlighting
                 
                 highScore = parseInt(localStorage.getItem(HIGHSCORE_KEY) || '0');
                 highScoreEl.textContent = highScore;
@@ -1888,13 +1938,26 @@
                 musicToggle.addEventListener('click', toggleMusic);
                 soundsToggle.addEventListener('click', toggleSounds);
                 boosterIndicator.addEventListener('click', toggleBoosterTooltip);
+                
+                // Highscore event listeners
+                highscoreSubmitConfirm.addEventListener('click', handleHighscoreSubmit);
+                highscoreSubmitCancel.addEventListener('click', async () => {
+                    hideHighscoreSubmitModal();
+                    await showGameOverResults();
+                });
+                highscoreNameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        handleHighscoreSubmit();
+                    }
+                });
             }
             
             // --- Helper to check if any modal is visible ---
             function isModalVisible() {
                 return !pauseModal.classList.contains('hidden') || 
                        !gameOverModal.classList.contains('hidden') || 
-                       !restartConfirmModal.classList.contains('hidden');
+                       !restartConfirmModal.classList.contains('hidden') ||
+                       !highscoreSubmitModal.classList.contains('hidden');
             }
             
             // --- Event Handlers (to allow removal) ---
@@ -2077,6 +2140,132 @@
                 }
             }
             
+            // --- Highscore Functions ---
+            function showHighscoreSubmitModal() {
+                // Get the score from finalScoreEl to ensure it's always correct
+                const currentScore = parseInt(finalScoreEl.textContent) || score;
+                highscoreSubmitScore.textContent = currentScore;
+                highscoreNameInput.value = '';
+                highscoreSubmitMessage.textContent = '';
+                highscoreSubmitMessage.className = 'text-sm mb-4 min-h-6';
+                highscoreSubmitModal.classList.remove('hidden');
+                // Focus on input
+                setTimeout(() => highscoreNameInput.focus(), 100);
+            }
+            
+            function hideHighscoreSubmitModal() {
+                highscoreSubmitModal.classList.add('hidden');
+            }
+            
+            async function handleHighscoreSubmit() {
+                const name = highscoreNameInput.value.trim();
+                const currentScore = parseInt(highscoreSubmitScore.textContent) || score;
+                
+                // Validate name
+                if (!name) {
+                    highscoreSubmitMessage.textContent = 'Please enter your name';
+                    highscoreSubmitMessage.className = 'text-sm mb-4 min-h-6 text-red-500';
+                    return;
+                }
+                
+                if (name.length < 2) {
+                    highscoreSubmitMessage.textContent = 'Name must be at least 2 characters';
+                    highscoreSubmitMessage.className = 'text-sm mb-4 min-h-6 text-red-500';
+                    return;
+                }
+                
+                // Show loading state
+                highscoreSubmitMessage.textContent = 'Submitting...';
+                highscoreSubmitMessage.className = 'text-sm mb-4 min-h-6 text-blue-500';
+                highscoreSubmitConfirm.disabled = true;
+                
+                try {
+                    // Submit the highscore
+                    const success = await submitHighscore(name, currentScore);
+                    
+                    if (success) {
+                        // Store the submitted values for highlighting in leaderboard
+                        lastSubmittedName = name;
+                        lastSubmittedScore = currentScore;
+                        
+                        highscoreSubmitMessage.textContent = '✓ Submitted successfully!';
+                        highscoreSubmitMessage.className = 'text-sm mb-4 min-h-6 text-green-500';
+                        
+                        // Close modal and show results screen
+                        setTimeout(async () => {
+                            hideHighscoreSubmitModal();
+                            await showGameOverResults();
+                        }, 1000);
+                    } else {
+                        throw new Error('Submission failed');
+                    }
+                } catch (error) {
+                    highscoreSubmitMessage.textContent = '✗ Failed to submit. Please try again.';
+                    highscoreSubmitMessage.className = 'text-sm mb-4 min-h-6 text-red-500';
+                    highscoreSubmitConfirm.disabled = false;
+                }
+            }
+            
+            async function showGameOverResults() {
+                // Set the final score
+                finalScoreEl.textContent = score;
+                
+                // Load and display leaderboard
+                gameOverLeaderboard.innerHTML = '<div class="text-gray-500">Loading...</div>';
+                
+                try {
+                    const highscores = await fetchGlobalHighscores();
+                    
+                    if (highscores.length === 0) {
+                        gameOverLeaderboard.innerHTML = '<div class="text-gray-500">No scores yet. Be the first!</div>';
+                    } else {
+                        // Create leaderboard display
+                        let html = '<div class="space-y-2">';
+                        
+                        highscores.forEach((entry, index) => {
+                            const rank = index + 1;
+                            const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
+                            // Highlight if this matches the last submitted highscore
+                            const isCurrentScore = lastSubmittedName && 
+                                                  entry.score === lastSubmittedScore && 
+                                                  entry.name === lastSubmittedName;
+                            const highlightClass = isCurrentScore ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-50';
+                            
+                            html += `
+                                <div class="${highlightClass} rounded-lg p-2 flex items-center justify-between text-sm">
+                                    <div class="flex items-center gap-2 flex-1">
+                                        <span class="text-lg font-bold w-6 text-center">${medal}</span>
+                                        <span class="font-semibold truncate flex-1">${escapeHtml(entry.name)}</span>
+                                    </div>
+                                    <span class="text-base font-bold text-purple-600">${entry.score.toLocaleString()}</span>
+                                </div>
+                            `;
+                        });
+                        
+                        html += '</div>';
+                        gameOverLeaderboard.innerHTML = html;
+                    }
+                } catch (error) {
+                    gameOverLeaderboard.innerHTML = '<div class="text-red-500">Failed to load leaderboard</div>';
+                }
+                
+                // Show the game over modal with results
+                gameOverModal.classList.remove('hidden');
+                gameOverText.classList.add('visible');
+                gameOverContent.classList.add('visible');
+                
+                // Re-enable interactions
+                isGameOverAnimating = false;
+                gameWrapper.style.pointerEvents = 'auto';
+            }
+            
+            // Helper function to escape HTML
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
             function handleRestart() {
                 // Prevent restart during game over animation
                 if (isGameOverAnimating) {
@@ -2089,6 +2278,9 @@
                 gameOverModal.classList.add('hidden');
                 gameOverText.classList.remove('visible');
                 gameOverContent.classList.remove('visible');
+                
+                // Hide highscore modal
+                highscoreSubmitModal.classList.add('hidden');
                 
                 // Stop background music before restart
                 stopBackgroundMusic();
@@ -2203,28 +2395,22 @@
                     World.remove(world, groundWall);
                 }
                 
-                // Show the game over modal container (without content visible yet)
-                gameOverModal.classList.remove('hidden');
-                
-                // Immediately fade in the "Game Over" text while fruits are falling
-                gameOverTimeouts.push(setTimeout(() => {
-                    gameOverText.classList.add('visible');
-                }, 50));
-                
-                // Let the fruits fall for 2 seconds, then show modal content
-                gameOverTimeouts.push(setTimeout(() => {
-                    finalScoreEl.textContent = score;
-
+                // Let the fruits fall for 2 seconds, then check qualification
+                gameOverTimeouts.push(setTimeout(async () => {
                     localStorage.setItem(HIGHSCORE_KEY, highScore.toString());
                     localStorage.removeItem(GAME_STATE_KEY);
 
-                    // Fade in the modal background, score, and restart button
-                    gameOverContent.classList.add('visible');
-                    
-                    // Re-enable pointer events and clear animation flag ONLY after content is visible
-                    // This ensures the restart button can be clicked only when fully shown
-                    isGameOverAnimating = false;
-                    gameWrapper.style.pointerEvents = 'auto';
+                    // Check if score qualifies for top 10
+                    const qualifies = await qualifiesForTop10(score);
+                    if (qualifies) {
+                        // Show name entry modal first
+                        showHighscoreSubmitModal();
+                        isGameOverAnimating = false;
+                        gameWrapper.style.pointerEvents = 'auto';
+                    } else {
+                        // Show results screen directly
+                        await showGameOverResults();
+                    }
                 }, 2000));
                 
                 // Keep the game running for a few more seconds to ensure all fruits fall off screen
