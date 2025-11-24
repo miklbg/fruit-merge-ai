@@ -534,7 +534,7 @@
         // Import Web Audio BGM controller
         import { createBgmController } from './audio/web-audio-bgm.js';
         // Import highscore functions
-        import { fetchGlobalHighscores, submitHighscore, qualifiesForTop10, getScoreRank } from './highscores.js';
+        import { fetchGlobalHighscores, submitHighscore, qualifiesForTop10 } from './highscores.js';
 
         // Wait for the *entire page* to load
         window.onload = () => {
@@ -663,6 +663,8 @@
             let saveCounter = 0; 
             let achievedFruits = new Set();
             let currentGameMaxFruit = -1;
+            let lastSubmittedName = ''; // Track last submitted highscore name
+            let lastSubmittedScore = 0; // Track last submitted highscore score
             
             let bodiesToRemoveSet = new Set();
             let bodiesToAddArray = [];
@@ -1164,6 +1166,8 @@
                 warningLineThickness = 2;
                 warningAnimationFrame = 0;
                 lastWarningSound = 0;
+                
+                // Don't reset lastSubmittedName and lastSubmittedScore - keep them for leaderboard highlighting
                 
                 highScore = parseInt(localStorage.getItem(HIGHSCORE_KEY) || '0');
                 highScoreEl.textContent = highScore;
@@ -2195,6 +2199,10 @@
                     const success = await submitHighscore(name, currentScore);
                     
                     if (success) {
+                        // Store the submitted values for highlighting in leaderboard
+                        lastSubmittedName = name;
+                        lastSubmittedScore = currentScore;
+                        
                         highscoreSubmitMessage.textContent = '✓ Submitted successfully!';
                         highscoreSubmitMessage.className = 'text-sm mb-4 min-h-6 text-green-500';
                         
@@ -2235,7 +2243,10 @@
                     highscores.forEach((entry, index) => {
                         const rank = index + 1;
                         const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
-                        const isCurrentScore = entry.score === score && entry.name === highscoreNameInput.value.trim();
+                        // Highlight if this matches the last submitted highscore
+                        const isCurrentScore = lastSubmittedName && 
+                                              entry.score === lastSubmittedScore && 
+                                              entry.name === lastSubmittedName;
                         const highlightClass = isCurrentScore ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-50';
                         
                         html += `
