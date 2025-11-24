@@ -4,8 +4,8 @@
  */
 
 // Configuration
-const HIGHSCORE_API_URL = 'https://api.jsonbin.io/v3/b/YOUR_BIN_ID';
-const HIGHSCORE_API_KEY = 'YOUR_API_KEY'; // For JSONBin.io or similar service
+const HIGHSCORE_API_URL = 'https://api.jsonbin.io/v3/b/69241d0443b1c97be9c19182';
+const HIGHSCORE_API_KEY = '$2a$10$K5pKfYyHPXIHaPSCmT0GZuga6ywRs61QDtSudYPYYWYlSMScYMUDi';
 
 // Maximum number of highscores to keep
 const MAX_HIGHSCORES = 10;
@@ -16,18 +16,7 @@ const MAX_HIGHSCORES = 10;
  */
 export async function fetchGlobalHighscores() {
     try {
-        // For demo purposes, use localStorage as a fallback
-        // In production, replace with actual API call
-        const localScores = localStorage.getItem('global-highscores');
-        if (localScores) {
-            return JSON.parse(localScores);
-        }
-        
-        // Initialize with empty array if no scores exist
-        return [];
-        
-        /* Production code example with JSONBin.io:
-        const response = await fetch(HIGHSCORE_API_URL, {
+        const response = await fetch(HIGHSCORE_API_URL + '/latest', {
             method: 'GET',
             headers: {
                 'X-Master-Key': HIGHSCORE_API_KEY
@@ -40,9 +29,13 @@ export async function fetchGlobalHighscores() {
         
         const data = await response.json();
         return data.record || [];
-        */
     } catch (error) {
         console.error('Error fetching highscores:', error);
+        // Fallback to localStorage if API fails
+        const localScores = localStorage.getItem('global-highscores');
+        if (localScores) {
+            return JSON.parse(localScores);
+        }
         return [];
     }
 }
@@ -71,13 +64,7 @@ export async function submitHighscore(name, score) {
         // Keep only top MAX_HIGHSCORES
         const topScores = highscores.slice(0, MAX_HIGHSCORES);
         
-        // Save back to storage
-        // For demo, use localStorage
-        localStorage.setItem('global-highscores', JSON.stringify(topScores));
-        
-        return true;
-        
-        /* Production code example with JSONBin.io:
+        // Save to JSONBin
         const response = await fetch(HIGHSCORE_API_URL, {
             method: 'PUT',
             headers: {
@@ -87,11 +74,32 @@ export async function submitHighscore(name, score) {
             body: JSON.stringify(topScores)
         });
         
-        return response.ok;
-        */
+        if (!response.ok) {
+            throw new Error('Failed to submit highscore');
+        }
+        
+        // Also save to localStorage as backup
+        localStorage.setItem('global-highscores', JSON.stringify(topScores));
+        
+        return true;
     } catch (error) {
         console.error('Error submitting highscore:', error);
-        return false;
+        // Fallback to localStorage only if API fails
+        try {
+            const highscores = await fetchGlobalHighscores();
+            highscores.push({
+                name: name.trim(),
+                score: score,
+                date: new Date().toISOString()
+            });
+            highscores.sort((a, b) => b.score - a.score);
+            const topScores = highscores.slice(0, MAX_HIGHSCORES);
+            localStorage.setItem('global-highscores', JSON.stringify(topScores));
+            return true;
+        } catch (fallbackError) {
+            console.error('Error in fallback submission:', fallbackError);
+            return false;
+        }
     }
 }
 
