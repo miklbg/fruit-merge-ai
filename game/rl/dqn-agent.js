@@ -173,19 +173,25 @@ export class DQNAgent {
         }
         
         // Train the model
-        const loss = await tf.tidy(() => {
-            const statesTensor = tf.tensor2d(states);
-            const targetsTensor = tf.tensor2d(targets);
-            
-            return this.model.fit(statesTensor, targetsTensor, {
+        const statesTensor = tf.tensor2d(states);
+        const targetsTensor = tf.tensor2d(targets);
+        
+        try {
+            const history = await this.model.fit(statesTensor, targetsTensor, {
                 epochs: 1,
                 verbose: 0
-            }).then(history => history.history.loss[0]);
-        });
-        
-        this.trainingSteps++;
-        
-        return loss;
+            });
+            
+            const loss = history.history.loss[0];
+            
+            this.trainingSteps++;
+            
+            return loss;
+        } finally {
+            // Clean up tensors
+            statesTensor.dispose();
+            targetsTensor.dispose();
+        }
     }
 
     /**
@@ -264,6 +270,16 @@ export class DQNAgent {
         try {
             this.model = await tf.loadLayersModel(`indexeddb://${name}`);
             this.targetModel = await tf.loadLayersModel(`indexeddb://${name}`);
+            
+            // Compile the loaded models (required for training)
+            this.model.compile({
+                optimizer: tf.train.adam(this.learningRate),
+                loss: 'meanSquaredError'
+            });
+            this.targetModel.compile({
+                optimizer: tf.train.adam(this.learningRate),
+                loss: 'meanSquaredError'
+            });
             
             // Load metadata
             const metadataStr = localStorage.getItem(`${name}-metadata`);

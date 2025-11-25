@@ -534,6 +534,9 @@
                     <button id="ai-watch-play" class="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-blue-400 transition-all">
                         Watch AI Play
                     </button>
+                    <button id="ai-stop-play" class="hidden px-6 py-3 bg-red-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-red-400 transition-all">
+                        Stop AI Play
+                    </button>
                     <button id="ai-reset-training" class="px-6 py-3 bg-orange-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-orange-400 transition-all">
                         Reset Training
                     </button>
@@ -647,6 +650,7 @@
             const aiStartTraining = document.getElementById('ai-start-training');
             const aiStopTraining = document.getElementById('ai-stop-training');
             const aiWatchPlay = document.getElementById('ai-watch-play');
+            const aiStopPlay = document.getElementById('ai-stop-play');
             const aiResetTraining = document.getElementById('ai-reset-training');
             const aiTrainingStatus = document.getElementById('ai-training-status');
             const aiStatusText = document.getElementById('ai-status-text');
@@ -2086,6 +2090,7 @@
                 aiStartTraining.addEventListener('click', handleStartTraining);
                 aiStopTraining.addEventListener('click', handleStopTraining);
                 aiWatchPlay.addEventListener('click', handleWatchAIPlay);
+                aiStopPlay.addEventListener('click', handleStopAIPlay);
                 aiResetTraining.addEventListener('click', handleResetTraining);
             }
             
@@ -2173,6 +2178,10 @@
                 aiModal.classList.add('hidden');
                 pauseModal.classList.add('hidden');
                 
+                // Update UI to show Stop AI Play button
+                aiWatchPlay.classList.add('hidden');
+                aiStopPlay.classList.remove('hidden');
+                
                 // Disable fast-forward for playback (normal speed)
                 gameAPI.setFastForwardMode(false);
                 isRLMode = true;
@@ -2183,9 +2192,29 @@
                 if (!success) {
                     alert('Failed to start AI playback. No trained model found.');
                     aiModal.classList.remove('hidden');
+                    aiWatchPlay.classList.remove('hidden');
+                    aiStopPlay.classList.add('hidden');
                 }
                 
+                // Reset UI when playback ends
+                aiWatchPlay.classList.remove('hidden');
+                aiStopPlay.classList.add('hidden');
                 isRLMode = false;
+            }
+            
+            function handleStopAIPlay() {
+                if (rlController) {
+                    rlController.stopPlayback();
+                    gameAPI.setFastForwardMode(false);
+                    isRLMode = false;
+                    
+                    // Update UI
+                    aiWatchPlay.classList.remove('hidden');
+                    aiStopPlay.classList.add('hidden');
+                    
+                    // Show AI modal again
+                    aiModal.classList.remove('hidden');
+                }
             }
             
             async function handleResetTraining() {
