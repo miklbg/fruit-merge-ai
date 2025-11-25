@@ -3,7 +3,8 @@
  * Uses TensorFlow.js to learn optimal fruit dropping strategy
  */
 
-import * as tf from '@tensorflow/tfjs';
+// TensorFlow.js is loaded globally via CDN
+const tf = window.tf;
 
 export class DQNAgent {
     constructor(stateSize, actionSize, config = {}) {
