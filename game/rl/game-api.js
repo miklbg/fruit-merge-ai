@@ -22,6 +22,9 @@ export class GameAPI {
         // State tracking
         this.previousMaxFruitLevel = -1;
         this.previousScore = 0;
+        
+        // Rendering control
+        this.renderStopped = false;
     }
 
     /**
@@ -233,6 +236,11 @@ export class GameAPI {
             if (game.runner) {
                 game.runner.delta = 1000 / 60 / this.fastForwardMultiplier;
             }
+            // Stop rendering for performance
+            if (game.render && game.Render && !this.renderStopped) {
+                game.Render.stop(game.render);
+                this.renderStopped = true;
+            }
             // Hide UI updates for performance
             if (game.scoreEl) game.scoreEl.style.display = 'none';
             if (game.nextFruitImgEl) game.nextFruitImgEl.style.display = 'none';
@@ -241,6 +249,11 @@ export class GameAPI {
             // Normal speed
             if (game.runner) {
                 game.runner.delta = 1000 / 60;
+            }
+            // Resume rendering
+            if (game.render && game.Render && this.renderStopped) {
+                game.Render.run(game.render);
+                this.renderStopped = false;
             }
             // Show UI
             if (game.scoreEl) game.scoreEl.style.display = '';
