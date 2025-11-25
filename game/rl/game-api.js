@@ -13,7 +13,7 @@ export class GameAPI {
         // These will be set by the game
         this.gameInstance = null;
         this.fastForwardMode = false;
-        this.fastForwardMultiplier = 10; // Speed up physics 10x for training
+        this.fastForwardMultiplier = 100; // Speed up physics 10x for training
         
         // Action queue for async execution
         this.actionQueue = [];
