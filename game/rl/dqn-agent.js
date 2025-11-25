@@ -176,20 +176,22 @@ export class DQNAgent {
         const statesTensor = tf.tensor2d(states);
         const targetsTensor = tf.tensor2d(targets);
         
-        const history = await this.model.fit(statesTensor, targetsTensor, {
-            epochs: 1,
-            verbose: 0
-        });
-        
-        const loss = history.history.loss[0];
-        
-        // Clean up tensors
-        statesTensor.dispose();
-        targetsTensor.dispose();
-        
-        this.trainingSteps++;
-        
-        return loss;
+        try {
+            const history = await this.model.fit(statesTensor, targetsTensor, {
+                epochs: 1,
+                verbose: 0
+            });
+            
+            const loss = history.history.loss[0];
+            
+            this.trainingSteps++;
+            
+            return loss;
+        } finally {
+            // Clean up tensors
+            statesTensor.dispose();
+            targetsTensor.dispose();
+        }
     }
 
     /**
