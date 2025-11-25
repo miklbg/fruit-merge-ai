@@ -26,6 +26,8 @@
     <link rel="stylesheet" href="css/tailwind.min.css">
     <!-- Load Matter.js Physics Engine -->
     <script src="matter.min.js"></script>
+    <!-- Load TensorFlow.js for RL -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
 
     <!-- Load font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -476,6 +478,69 @@
                         <span id="sounds-status">On</span>
                     </button>
                 </div>
+                <button id="ai-menu-button" class="px-6 py-3 bg-purple-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-purple-400 transition-all">
+                    🤖 AI Training
+                </button>
+            </div>
+        </div>
+
+        <!-- AI Training Modal -->
+        <div id="ai-modal" class="hidden absolute inset-0 bg-white/70 text-gray-900 backdrop-blur-md z-50 flex flex-col justify-center items-center text-center p-8">
+            <div class="bg-white text-gray-900 rounded-lg p-8 flex flex-col items-center shadow-2xl max-w-md w-full">
+                <h2 class="text-3xl font-bold text-purple-600 mb-4">🤖 AI Training</h2>
+                <p class="text-md mb-6 text-gray-700">
+                    Train an AI agent to play the game using reinforcement learning!
+                </p>
+                
+                <!-- Training Stats -->
+                <div id="ai-stats" class="w-full mb-4 p-4 bg-gray-50 rounded-lg text-left text-sm">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-semibold">Episodes:</span>
+                        <span id="ai-episodes">0</span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span class="font-semibold">Best Score:</span>
+                        <span id="ai-best-score">0</span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span class="font-semibold">Avg Score:</span>
+                        <span id="ai-avg-score">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold">Exploration:</span>
+                        <span id="ai-epsilon">100%</span>
+                    </div>
+                </div>
+                
+                <!-- Training Progress -->
+                <div id="ai-training-status" class="hidden w-full mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                    <div class="flex items-center gap-2">
+                        <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="ai-status-text">Training in progress...</span>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-col gap-3 w-full">
+                    <button id="ai-start-training" class="px-6 py-3 bg-green-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-green-400 transition-all">
+                        Start Training
+                    </button>
+                    <button id="ai-stop-training" class="hidden px-6 py-3 bg-red-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-red-400 transition-all">
+                        Stop Training
+                    </button>
+                    <button id="ai-watch-play" class="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-blue-400 transition-all">
+                        Watch AI Play
+                    </button>
+                    <button id="ai-reset-training" class="px-6 py-3 bg-orange-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-orange-400 transition-all">
+                        Reset Training
+                    </button>
+                    <button id="ai-back-button" class="px-6 py-3 bg-gray-500 text-white font-bold rounded-lg shadow-lg text-lg hover:bg-gray-400 transition-all">
+                        Back
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -525,6 +590,9 @@
         import { createBgmController } from './audio/web-audio-bgm.js';
         // Import highscore functions
         import { fetchGlobalHighscores, submitHighscore, qualifiesForTop10 } from './highscores.js';
+        // Import RL modules
+        import { GameAPI } from './rl/game-api.js';
+        import { RLController } from './rl/rl-controller.js';
 
         // Wait for the *entire page* to load
         window.onload = () => {
@@ -571,6 +639,21 @@
             const highscoreSubmitConfirm = document.getElementById('highscore-submit-confirm');
             const highscoreSubmitCancel = document.getElementById('highscore-submit-cancel');
             const gameOverLeaderboard = document.getElementById('game-over-leaderboard');
+            
+            // AI/RL elements
+            const aiMenuButton = document.getElementById('ai-menu-button');
+            const aiModal = document.getElementById('ai-modal');
+            const aiBackButton = document.getElementById('ai-back-button');
+            const aiStartTraining = document.getElementById('ai-start-training');
+            const aiStopTraining = document.getElementById('ai-stop-training');
+            const aiWatchPlay = document.getElementById('ai-watch-play');
+            const aiResetTraining = document.getElementById('ai-reset-training');
+            const aiTrainingStatus = document.getElementById('ai-training-status');
+            const aiStatusText = document.getElementById('ai-status-text');
+            const aiEpisodesEl = document.getElementById('ai-episodes');
+            const aiBestScoreEl = document.getElementById('ai-best-score');
+            const aiAvgScoreEl = document.getElementById('ai-avg-score');
+            const aiEpsilonEl = document.getElementById('ai-epsilon');
 
             // --- Matter.js modules ---
             const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Common } = Matter;
@@ -671,6 +754,11 @@
             const BOOSTER_UNLOCK_LEVEL = 5;
             let boosterReenableTimeout = null;
             let isGameOverAnimating = false; // Flag to prevent actions during game over animation
+            
+            // --- RL/AI State ---
+            let gameAPI = null;
+            let rlController = null;
+            let isRLMode = false; // Track if in RL training/playback mode
             
             function updateBoosterIndicator() {
                 if (!boosterUnlocked) {
@@ -1427,6 +1515,47 @@
                 // Update booster indicator position
                 updateBoosterIndicatorPosition();
                 
+                // Initialize RL API if not already done
+                if (!gameAPI) {
+                    gameAPI = new GameAPI();
+                }
+                // Inject game instance into API
+                gameAPI.init({
+                    // Game world info
+                    gameWorldWidth,
+                    gameWorldHeight,
+                    gameOverLineY,
+                    wallThickness: BASE_WALL_THICKNESS,
+                    FRUITS,
+                    
+                    // Game state
+                    get score() { return score; },
+                    get currentFruitLevel() { return currentFruitLevel; },
+                    get nextFruitLevel() { return nextFruitLevel; },
+                    get isGameOver() { return isGameOver; },
+                    get currentGameMaxFruit() { return currentGameMaxFruit; },
+                    get boosterUnlocked() { return boosterUnlocked; },
+                    get boosterCooldownCount() { return boosterCooldownCount; },
+                    get isWarningActive() { return isWarningActive; },
+                    get lastDropTime() { return lastDropTime; },
+                    get currentPreviewX() { return currentPreviewX; },
+                    set currentPreviewX(val) { currentPreviewX = val; },
+                    
+                    // Game objects
+                    world,
+                    runner,
+                    
+                    // UI elements
+                    scoreEl,
+                    nextFruitImgEl,
+                    previewFruitEl,
+                    
+                    // Game functions
+                    moveFruit,
+                    dropFruit,
+                    handleRestart
+                });
+                
                 addEventListeners();
             }
 
@@ -1950,6 +2079,139 @@
                         handleHighscoreSubmit();
                     }
                 });
+                
+                // AI/RL event listeners
+                aiMenuButton.addEventListener('click', showAIModal);
+                aiBackButton.addEventListener('click', hideAIModal);
+                aiStartTraining.addEventListener('click', handleStartTraining);
+                aiStopTraining.addEventListener('click', handleStopTraining);
+                aiWatchPlay.addEventListener('click', handleWatchAIPlay);
+                aiResetTraining.addEventListener('click', handleResetTraining);
+            }
+            
+            // --- AI/RL Functions ---
+            
+            function showAIModal() {
+                // Hide pause menu
+                pauseModal.classList.add('hidden');
+                // Show AI modal
+                aiModal.classList.remove('hidden');
+                // Update stats display
+                updateAIStats();
+            }
+            
+            function hideAIModal() {
+                aiModal.classList.add('hidden');
+                // Show pause menu again
+                pauseModal.classList.remove('hidden');
+            }
+            
+            async function handleStartTraining() {
+                if (!rlController) {
+                    rlController = new RLController(gameAPI);
+                    
+                    // Set up callbacks
+                    rlController.onStatsUpdate = updateAIStats;
+                    rlController.onEpisodeEnd = (info) => {
+                        console.log(`Episode ${info.episode}: Score ${info.score}, Reward ${info.reward.toFixed(2)}, Epsilon ${(info.epsilon * 100).toFixed(1)}%`);
+                    };
+                    rlController.onTrainingComplete = (stats) => {
+                        console.log('Training complete!', stats);
+                        aiStartTraining.classList.remove('hidden');
+                        aiStopTraining.classList.add('hidden');
+                        aiTrainingStatus.classList.add('hidden');
+                    };
+                }
+                
+                // Enable fast-forward mode
+                gameAPI.setFastForwardMode(true);
+                isRLMode = true;
+                
+                // Hide modal and show training status
+                aiModal.classList.add('hidden');
+                pauseModal.classList.add('hidden');
+                
+                // Update UI
+                aiStartTraining.classList.add('hidden');
+                aiStopTraining.classList.remove('hidden');
+                aiTrainingStatus.classList.remove('hidden');
+                aiStatusText.textContent = 'Training in progress...';
+                
+                // Start training (1000 episodes, 500 steps each)
+                rlController.startTraining(1000, 500);
+            }
+            
+            async function handleStopTraining() {
+                if (rlController) {
+                    await rlController.stopTraining();
+                    gameAPI.setFastForwardMode(false);
+                    isRLMode = false;
+                    
+                    // Update UI
+                    aiStartTraining.classList.remove('hidden');
+                    aiStopTraining.classList.add('hidden');
+                    aiTrainingStatus.classList.add('hidden');
+                    
+                    // Show AI modal again
+                    aiModal.classList.remove('hidden');
+                }
+            }
+            
+            async function handleWatchAIPlay() {
+                if (!rlController) {
+                    rlController = new RLController(gameAPI);
+                }
+                
+                // Check if model exists
+                const hasModel = await rlController.hasTrainedModel();
+                if (!hasModel) {
+                    alert('No trained model found. Please train the AI first!');
+                    return;
+                }
+                
+                // Hide modal
+                aiModal.classList.add('hidden');
+                pauseModal.classList.add('hidden');
+                
+                // Disable fast-forward for playback (normal speed)
+                gameAPI.setFastForwardMode(false);
+                isRLMode = true;
+                
+                // Start playback
+                const success = await rlController.startPlayback();
+                
+                if (!success) {
+                    alert('Failed to start AI playback. No trained model found.');
+                    aiModal.classList.remove('hidden');
+                }
+                
+                isRLMode = false;
+            }
+            
+            async function handleResetTraining() {
+                if (confirm('Are you sure you want to reset all AI training data? This cannot be undone.')) {
+                    if (rlController) {
+                        await rlController.resetTraining();
+                        updateAIStats();
+                        alert('Training data has been reset.');
+                    }
+                }
+            }
+            
+            function updateAIStats(stats) {
+                if (!stats && rlController) {
+                    stats = rlController.getStats();
+                }
+                
+                if (stats) {
+                    aiEpisodesEl.textContent = stats.totalEpisodes || 0;
+                    aiBestScoreEl.textContent = Math.floor(stats.bestScore || 0);
+                    aiAvgScoreEl.textContent = Math.floor(stats.averageScore || 0);
+                    
+                    if (stats.agentStats) {
+                        aiEpsilonEl.textContent = `${(stats.agentStats.epsilon * 100).toFixed(1)}%`;
+                    }
+                }
             }
             
             // --- Helper to check if any modal is visible ---
@@ -1957,7 +2219,8 @@
                 return !pauseModal.classList.contains('hidden') || 
                        !gameOverModal.classList.contains('hidden') || 
                        !restartConfirmModal.classList.contains('hidden') ||
-                       !highscoreSubmitModal.classList.contains('hidden');
+                       !highscoreSubmitModal.classList.contains('hidden') ||
+                       !aiModal.classList.contains('hidden');
             }
             
             // --- Event Handlers (to allow removal) ---
