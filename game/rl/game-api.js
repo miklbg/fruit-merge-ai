@@ -13,7 +13,7 @@ export class GameAPI {
         // These will be set by the game
         this.gameInstance = null;
         this.fastForwardMode = false;
-        this.fastForwardMultiplier = 100; // Speed up physics 10x for training
+        this.fastForwardMultiplier = 1000; // Speed up physics 1000x for training
         
         // Action queue for async execution
         this.actionQueue = [];
@@ -151,7 +151,7 @@ export class GameAPI {
         }
         
         // Wait for fruit to settle and merges to complete
-        const waitTime = this.fastForwardMode ? 100 : 800; // Faster in training mode
+        const waitTime = this.fastForwardMode ? 10 : 800; // Much faster in training mode
         
         setTimeout(() => {
             const currentScore = game.score || 0;

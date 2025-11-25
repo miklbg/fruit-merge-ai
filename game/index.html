@@ -2136,8 +2136,7 @@
                 gameAPI.setFastForwardMode(true);
                 isRLMode = true;
                 
-                // Hide modal and show training status
-                aiModal.classList.add('hidden');
+                // Keep AI modal open but hide pause modal
                 pauseModal.classList.add('hidden');
                 
                 // Update UI
@@ -2161,8 +2160,7 @@
                     aiStopTraining.classList.add('hidden');
                     aiTrainingStatus.classList.add('hidden');
                     
-                    // Show AI modal again
-                    aiModal.classList.remove('hidden');
+                    // AI modal should already be visible during training
                 }
             }
             
