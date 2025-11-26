@@ -126,11 +126,6 @@ export class DQNAgent {
     remember(state, action, reward, nextState, done) {
         this.memory.push({ state, action, reward, nextState, done });
         
-        // Log every 100 experiences to avoid spam
-        if (this.memory.length % 100 === 0) {
-            console.log('[DQNAgent] remember() - memory size:', this.memory.length);
-        }
-        
         // Keep memory size limited
         if (this.memory.length > this.memorySize) {
             this.memory.shift();
@@ -143,11 +138,8 @@ export class DQNAgent {
      */
     async replay() {
         if (this.memory.length < this.batchSize) {
-            console.log('[DQNAgent] replay() - not enough memory:', this.memory.length, '/', this.batchSize);
             return 0;
         }
-        
-        console.log('[DQNAgent] replay() - training with batch size:', this.batchSize);
         
         // Sample random batch from memory
         const batch = this.sampleBatch(this.batchSize);
@@ -210,7 +202,6 @@ export class DQNAgent {
             const loss = history.history.loss[0];
             
             this.trainingSteps++;
-            console.log('[DQNAgent] replay() - training step:', this.trainingSteps, 'loss:', loss);
             
             return loss;
         } finally {
@@ -263,12 +254,10 @@ export class DQNAgent {
      */
     endEpisode() {
         this.episodeCount++;
-        console.log('[DQNAgent] endEpisode() - episodeCount:', this.episodeCount, 'epsilon:', this.epsilon);
         this.decayEpsilon();
         
         // Update target network periodically
         if (this.episodeCount % this.updateTargetEvery === 0) {
-            console.log('[DQNAgent] Updating target model');
             this.updateTargetModel();
         }
     }
