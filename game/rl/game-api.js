@@ -70,8 +70,11 @@ export class GameAPI {
             });
         }
         
-        // If fast-forward mode was already enabled, start manual simulation loop
+        // If fast-forward mode was already enabled, restart manual simulation loop
+        // to use the new engine instance
         if (this.fastForwardMode) {
+            // Stop any existing loop first (it may be using old engine reference)
+            this.stopManualSimulationLoop();
             this.startManualSimulationLoop();
         }
     }
@@ -376,10 +379,10 @@ export class GameAPI {
     startManualSimulationLoop() {
         if (this.manualLoopRunning) return;
         
-        const game = this.gameInstance;
-        if (!game || !game.engine) return;
+        if (!this.gameInstance || !this.gameInstance.engine) return;
         
         // Stop the Runner to prevent double-updates
+        const game = this.gameInstance;
         if (game.Runner && game.runner && !this.runnerStopped) {
             game.Runner.stop(game.runner);
             this.runnerStopped = true;
@@ -388,8 +391,17 @@ export class GameAPI {
         this.manualLoopRunning = true;
         
         // Run simulation loop
+        // Note: We use this.gameInstance inside the loop instead of capturing
+        // a local variable, so that if init() is called with a new game instance,
+        // the loop will automatically use the new engine.
         const runLoop = () => {
             if (!this.manualLoopRunning || !this.fastForwardMode) {
+                return;
+            }
+            
+            // Check if game instance is still valid
+            if (!this.gameInstance || !this.gameInstance.engine) {
+                this.manualLoopRunning = false;
                 return;
             }
             
@@ -399,7 +411,7 @@ export class GameAPI {
                 // Matter.js Engine.update(engine, delta, correction)
                 // delta: time step in milliseconds (default: 1000/60 ≈ 16.67ms)
                 // correction: timing correction factor (default: 1, no correction)
-                Matter.Engine.update(game.engine, this.FIXED_DELTA_TIME);
+                Matter.Engine.update(this.gameInstance.engine, this.FIXED_DELTA_TIME);
             }
             
             // Use setTimeout(0) to yield to the event loop
