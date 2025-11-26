@@ -55,11 +55,13 @@ High-level controller that:
 
 | Optimization | Description | Speed Gain |
 |--------------|-------------|------------|
-| **Turbo Mode** | 50 physics updates per JS tick (vs 10 in normal fast-forward) | ~5x faster |
-| **Reduced Cooldowns** | Drop cooldown: 8 steps (turbo) vs 15 (normal) vs 25 (original) | ~3x faster actions |
+| **Turbo Mode** | 50 physics updates per JS tick (vs 20 in normal, 10 original) | ~5x faster simulation |
+| **Larger Physics Steps** | 33ms time step in turbo (vs 16.67ms) | 2x physics per step |
 | **State Caching** | Caches game state within simulation step | Reduces redundant calculations |
 | **Optimized Loops** | Direct array access instead of filter/forEach | ~20% faster state extraction |
 | **queueMicrotask** | Uses faster scheduling than setTimeout(0) | Tighter simulation loop |
+
+Note: Drop cooldown is kept at 25 steps (~400ms equivalent) to ensure proper physics settling.
 
 ## State Representation
 
@@ -157,14 +159,11 @@ await rlController.startPlayback();
 ### Configuring Simulation Speed
 
 ```javascript
-// Customize speed parameters for your hardware
+// Customize batch size parameters for your hardware
+// Note: Cooldown steps are kept at standard values to ensure proper physics settling
 gameAPI.configureSpeed({
   simulationBatchSize: 30,      // Physics updates per tick (normal fast-forward)
-  turboBatchSize: 100,          // Physics updates per tick (turbo mode)
-  dropCooldownSteps: 10,        // Steps to wait after drop (normal)
-  turboDropCooldownSteps: 5,    // Steps to wait after drop (turbo)
-  resetCooldownSteps: 3,        // Steps to wait after reset (normal)
-  turboResetCooldownSteps: 2    // Steps to wait after reset (turbo)
+  turboBatchSize: 100           // Physics updates per tick (turbo mode)
 });
 ```
 
@@ -194,17 +193,18 @@ const exists = await agent.modelExists('my-model-name');
 ### Turbo Mode (NEW)
 Maximum speed training with:
 - **50 physics updates per JavaScript tick** (vs 20 in normal fast-forward, 10 original)
-- **Larger physics time steps** (33ms vs 16.67ms) for 2x physics speed
-- **Minimal cooldowns** (8 steps for drop, 3 for reset)
-- **queueMicrotask scheduling** for tighter loops
+- **Larger physics time steps** (33ms vs 16.67ms) for 2x physics speed per step
+- **queueMicrotask scheduling** for tighter simulation loops
 - **State caching** to avoid redundant calculations
+
+Note: Drop cooldown is kept at 25 steps (~400ms) to ensure proper physics settling.
 
 ### Fast-Forward Mode
 Standard accelerated training:
 - Rendering disabled for performance
 - UI updates disabled
 - 20 physics updates per tick
-- 15 step drop cooldown, 5 step reset cooldown
+- Standard cooldowns (25 steps drop, 10 steps reset) for physics stability
 
 ### Algorithm Optimizations
 - **Double DQN**: Reduces Q-value overestimation
@@ -222,10 +222,9 @@ Standard accelerated training:
 - Old models cleaned up when new ones are saved
 
 ### Overall Training Speed
-With turbo mode, training is approximately **100-500x faster** than real-time gameplay:
-- 50 physics updates per tick
-- 2x physics time step
-- Minimal cooldowns (8 steps)
+With turbo mode, training is approximately **50-100x faster** than real-time gameplay:
+- 50 physics updates per tick (5x faster than original)
+- 2x physics time step in turbo mode
 - No rendering overhead
 - Efficient batch processing with larger batches (64)
 - Optimized state extraction with caching

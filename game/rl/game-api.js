@@ -8,10 +8,9 @@
  * - Fast-forward mode for training
  * 
  * Simulation Speed Optimizations:
- * - Turbo mode: Maximum speed with minimal cooldowns
+ * - Turbo mode: Maximum speed with increased batch sizes
  * - Configurable batch sizes for physics updates
  * - Optimized scheduling using queueMicrotask when available
- * - Reduced cooldown steps for faster sample collection
  */
 
 export class GameAPI {
@@ -29,14 +28,12 @@ export class GameAPI {
         this.TURBO_DELTA_TIME = 1000 / 30;
         
         // Convert time-based cooldowns to simulation steps
-        // Normal fast-forward: ~400ms = 24 frames, use 15 steps (reduced for faster training)
-        this.DROP_COOLDOWN_STEPS = 15;
-        // Turbo mode: minimal cooldown, just enough for physics to settle
-        this.TURBO_DROP_COOLDOWN_STEPS = 8;
+        // At 60 FPS, 400ms = 24 frames. We use 25 steps for safety margin
+        // This is kept at 400ms equivalent as required for proper physics settling
+        this.DROP_COOLDOWN_STEPS = 25;
         
-        // Reset cooldown: reduced from 10 to 5 for faster episode resets
-        this.RESET_COOLDOWN_STEPS = 5;
-        this.TURBO_RESET_COOLDOWN_STEPS = 3;
+        // Reset cooldown: 200ms = ~12 frames at 60 FPS, use 10 steps
+        this.RESET_COOLDOWN_STEPS = 10;
         
         // Step counters for cooldowns (replaces timeout-based approach)
         this.dropCooldownCounter = 0;
@@ -196,8 +193,10 @@ export class GameAPI {
         const fillLevel = Math.min(1, Math.max(0, 1 - (gameOverLineY / (maxY || gameWorldHeight))));
         
         // Time since last drop - use simulation steps in fast-forward mode for consistency
+        // Use appropriate delta time based on turbo mode
+        const deltaTime = this.turboMode ? this.TURBO_DELTA_TIME : this.FIXED_DELTA_TIME;
         const timeSinceLastDrop = this.fastForwardMode 
-            ? (this.simulationStep - (game.lastDropStep || 0)) * this.FIXED_DELTA_TIME
+            ? (this.simulationStep - (game.lastDropStep || 0)) * deltaTime
             : Date.now() - (game.lastDropTime || 0);
         
         const state = {
@@ -327,10 +326,9 @@ export class GameAPI {
         // In fast-forward mode, use step-based cooldown
         // In normal mode, still use timeout for visual feedback (game hasn't changed)
         if (this.fastForwardMode) {
-            // Use turbo cooldown if in turbo mode, otherwise normal fast-forward cooldown
-            this.dropCooldownCounter = this.turboMode 
-                ? this.TURBO_DROP_COOLDOWN_STEPS 
-                : this.DROP_COOLDOWN_STEPS;
+            // Start cooldown counter - will be decremented in onSimulationStep()
+            // Cooldown is kept at 25 steps (~400ms equivalent) for proper physics settling
+            this.dropCooldownCounter = this.DROP_COOLDOWN_STEPS;
         } else {
             // Normal mode: use timeout for visual gameplay
             setTimeout(() => {
@@ -384,11 +382,9 @@ export class GameAPI {
             // In fast-forward mode, use step-based cooldown with callback
             // In normal mode, use timeout for visual reset
             if (this.fastForwardMode) {
-                // Use turbo cooldown if in turbo mode
+                // Use the same callback pattern as drop actions for consistency
                 this.resetResolveCallback = resolve;
-                this.resetCooldownCounter = this.turboMode 
-                    ? this.TURBO_RESET_COOLDOWN_STEPS 
-                    : this.RESET_COOLDOWN_STEPS;
+                this.resetCooldownCounter = this.RESET_COOLDOWN_STEPS;
                 // Callback will be triggered by onSimulationStep when counter reaches 0
             } else {
                 // Normal mode: use timeout for visual reset
@@ -531,11 +527,6 @@ export class GameAPI {
                 // consistently when using manual Engine.update() calls, especially
                 // after handleRestart() creates a new engine instance
                 this.onSimulationStep();
-                
-                // Early exit if action completed (no need to simulate more)
-                if (!this.dropCooldownCounter && !this.resetCooldownCounter && !this.actionResolveCallback && !this.resetResolveCallback) {
-                    // No pending operations, but continue loop for physics settling
-                }
             }
             
             // Schedule next iteration
@@ -574,13 +565,15 @@ export class GameAPI {
             fastForwardMode: this.fastForwardMode,
             turboMode: this.turboMode,
             batchSize: this.turboMode ? this.TURBO_BATCH_SIZE : this.SIMULATION_BATCH_SIZE,
-            dropCooldownSteps: this.turboMode ? this.TURBO_DROP_COOLDOWN_STEPS : this.DROP_COOLDOWN_STEPS,
-            resetCooldownSteps: this.turboMode ? this.TURBO_RESET_COOLDOWN_STEPS : this.RESET_COOLDOWN_STEPS
+            dropCooldownSteps: this.DROP_COOLDOWN_STEPS,
+            resetCooldownSteps: this.RESET_COOLDOWN_STEPS
         };
     }
     
     /**
      * Configure simulation speed parameters
+     * Note: Cooldown steps are kept at standard values (25 for drop, 10 for reset)
+     * to ensure proper physics settling. Speed is improved via batch size instead.
      * @param {Object} config - Configuration options
      */
     configureSpeed(config = {}) {
@@ -589,18 +582,6 @@ export class GameAPI {
         }
         if (config.turboBatchSize !== undefined) {
             this.TURBO_BATCH_SIZE = config.turboBatchSize;
-        }
-        if (config.dropCooldownSteps !== undefined) {
-            this.DROP_COOLDOWN_STEPS = config.dropCooldownSteps;
-        }
-        if (config.turboDropCooldownSteps !== undefined) {
-            this.TURBO_DROP_COOLDOWN_STEPS = config.turboDropCooldownSteps;
-        }
-        if (config.resetCooldownSteps !== undefined) {
-            this.RESET_COOLDOWN_STEPS = config.resetCooldownSteps;
-        }
-        if (config.turboResetCooldownSteps !== undefined) {
-            this.TURBO_RESET_COOLDOWN_STEPS = config.turboResetCooldownSteps;
         }
     }
 

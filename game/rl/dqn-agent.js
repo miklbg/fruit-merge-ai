@@ -388,8 +388,8 @@ export class DQNAgent {
                         break;
                     }
                 }
-                // Fallback to random if we couldn't sample
-                if (sampledIndices.size < batch.length + 1) {
+                // Fallback to random if we couldn't sample (compare against target size, not batch.length which is 0)
+                if (sampledIndices.size < batchSize) {
                     const randomIdx = Math.floor(Math.random() * this.memory.length);
                     sampledIndices.add(randomIdx);
                 }
