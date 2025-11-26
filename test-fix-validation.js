@@ -189,7 +189,7 @@ function runTests() {
     
     if (failed > 0) {
         console.log('\n✗ SOME TESTS FAILED');
-        process.exit(1);
+        throw new Error(`${failed} test(s) failed`);
     } else {
         console.log('\n✓ ALL TESTS PASSED');
         console.log('\nThe fix correctly addresses:');
@@ -198,6 +198,10 @@ function runTests() {
         console.log('  3. Runner is not started in fast-forward mode');
         console.log('  4. Multiple episode cycles work correctly');
     }
+    
+    return failed === 0;
 }
 
-runTests();
+// Run tests and exit with appropriate code
+const success = runTests();
+process.exitCode = success ? 0 : 1;
