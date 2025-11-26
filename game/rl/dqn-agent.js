@@ -142,33 +142,43 @@ export class DQNAgent {
         
         // Prepare training data
         const states = [];
-        const targets = [];
+        const nextStates = [];
+        const actions = [];
+        const rewards = [];
+        const dones = [];
         
         for (const experience of batch) {
-            const { state, action, reward, nextState, done } = experience;
+            states.push(experience.state);
+            nextStates.push(experience.nextState);
+            actions.push(experience.action);
+            rewards.push(experience.reward);
+            dones.push(experience.done);
+        }
+        
+        // Batch predict for better performance - predict all states at once
+        const currentQValuesArray = await tf.tidy(() => {
+            const statesTensor = tf.tensor2d(states);
+            return this.model.predict(statesTensor).arraySync();
+        });
+        
+        const nextQValuesArray = await tf.tidy(() => {
+            const nextStatesTensor = tf.tensor2d(nextStates);
+            return this.targetModel.predict(nextStatesTensor).arraySync();
+        });
+        
+        // Calculate targets for all experiences
+        const targets = [];
+        for (let i = 0; i < batch.length; i++) {
+            const targetQValues = [...currentQValuesArray[i]];
             
             // Calculate target Q-value
-            let target = reward;
-            if (!done) {
-                // Get max Q-value from target network for next state
-                const nextQValues = await tf.tidy(() => {
-                    const nextStateTensor = tf.tensor2d([nextState]);
-                    return this.targetModel.predict(nextStateTensor).dataSync();
-                });
-                target = reward + this.gamma * Math.max(...nextQValues);
+            let target = rewards[i];
+            if (!dones[i]) {
+                target = rewards[i] + this.gamma * Math.max(...nextQValuesArray[i]);
             }
             
-            // Get current Q-values
-            const currentQValues = await tf.tidy(() => {
-                const stateTensor = tf.tensor2d([state]);
-                return this.model.predict(stateTensor).dataSync();
-            });
-            
             // Update Q-value for the taken action
-            const targetQValues = [...currentQValues];
-            targetQValues[action] = target;
-            
-            states.push(state);
+            targetQValues[actions[i]] = target;
             targets.push(targetQValues);
         }
         
