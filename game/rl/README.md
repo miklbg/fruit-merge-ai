@@ -139,10 +139,16 @@ const exists = await agent.modelExists('my-model-name');
 ## Performance Optimization
 
 ### Fast-Forward Mode
-During training, the game runs 10x faster:
-- Physics delta reduced to `1000/60/10`
-- UI updates disabled
-- Faster action execution (100ms vs 800ms)
+During training, the game runs significantly faster:
+- Physics delta reduced by 1000x (`1000/60/1000`)
+- UI updates disabled for performance
+- Action execution: 1ms vs 800ms (800x faster)
+- Game reset: 1ms vs 200ms (200x faster)
+
+### Training Optimizations
+- **Batch prediction**: All experiences in a batch are predicted together (32x faster than individual predictions)
+- **Training frequency**: Model trains every 4 steps instead of every step (4x reduction in training calls)
+- **Stats updates**: UI updates every 20 steps instead of 10 (2x reduction in UI overhead)
 
 ### Memory Management
 - Experience replay buffer capped at 10,000

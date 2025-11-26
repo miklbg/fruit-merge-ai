@@ -151,7 +151,9 @@ export class GameAPI {
         }
         
         // Wait for fruit to settle and merges to complete
-        const waitTime = this.fastForwardMode ? 10 : 800; // Much faster in training mode
+        // In fast-forward mode (1000x physics speed), we only need 1ms
+        // In normal mode, 800ms allows for visual feedback and physics settling
+        const waitTime = this.fastForwardMode ? 1 : 800;
         
         setTimeout(() => {
             const currentScore = game.score || 0;
@@ -206,9 +208,11 @@ export class GameAPI {
             this.previousScore = 0;
             
             // Wait for reset to complete
+            // In fast-forward mode (1000x physics speed), minimal wait is needed
+            // In normal mode, 200ms allows for visual reset animation
             setTimeout(() => {
                 resolve();
-            }, this.fastForwardMode ? 50 : 200);
+            }, this.fastForwardMode ? 1 : 200);
         });
     }
 
