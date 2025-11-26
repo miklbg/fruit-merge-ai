@@ -16,16 +16,22 @@ export class GameAPI {
         // Physics speed multiplier for training - 20x provides maximum training speed
         // while maintaining physics accuracy
         this.TRAINING_PHYSICS_SPEED = 20;
-        // Drop cooldown scaled for training speed (400ms / 20 = 20ms)
-        // This allows physics to settle at 20x speed in the same real-world time as 400ms at 1x speed
-        this.DROP_COOLDOWN_MS = 20;
-        // Reset timeouts for fast-forward vs normal mode (scaled proportionally)
-        this.FAST_RESET_TIMEOUT_MS = 5;
-        this.NORMAL_RESET_TIMEOUT_MS = 200;
+        
+        // Convert time-based cooldowns to simulation steps
+        // At 60 FPS, 400ms = ~24 frames. We'll use 25 steps for safety
+        this.DROP_COOLDOWN_STEPS = 25;
+        // Reset cooldown: 200ms = ~12 frames at 60 FPS, use 10 steps
+        this.RESET_COOLDOWN_STEPS = 10;
+        
+        // Step counters for cooldowns (replaces timeout-based approach)
+        this.dropCooldownCounter = 0;
+        this.resetCooldownCounter = 0;
         
         // Action queue for async execution
         this.actionQueue = [];
         this.isExecutingAction = false;
+        this.actionResolveCallback = null;
+        this.resetResolveCallback = null;
         
         // State tracking
         this.previousMaxFruitLevel = -1;
@@ -33,6 +39,9 @@ export class GameAPI {
         
         // Rendering control
         this.renderStopped = false;
+        
+        // Track simulation steps
+        this.simulationStep = 0;
     }
 
     /**
@@ -43,6 +52,42 @@ export class GameAPI {
         this.gameInstance = gameInstance;
         this.previousMaxFruitLevel = gameInstance.currentGameMaxFruit || -1;
         this.previousScore = gameInstance.score || 0;
+        
+        // Hook into the game engine's afterUpdate event to track simulation steps
+        if (gameInstance.engine && gameInstance.Events) {
+            gameInstance.Events.on(gameInstance.engine, 'afterUpdate', () => {
+                this.onSimulationStep();
+            });
+        }
+    }
+    
+    /**
+     * Called on each simulation step (physics update)
+     * Decrements cooldown counters and processes pending actions
+     */
+    onSimulationStep() {
+        this.simulationStep++;
+        
+        // Decrement drop cooldown counter
+        if (this.dropCooldownCounter > 0) {
+            this.dropCooldownCounter--;
+            
+            // Check if action is waiting for cooldown to complete
+            if (this.dropCooldownCounter === 0 && this.actionResolveCallback) {
+                this.resolveCurrentAction();
+            }
+        }
+        
+        // Decrement reset cooldown counter
+        if (this.resetCooldownCounter > 0) {
+            this.resetCooldownCounter--;
+            
+            // Check if reset is waiting for cooldown to complete
+            if (this.resetCooldownCounter === 0 && this.resetResolveCallback) {
+                this.resetResolveCallback();
+                this.resetResolveCallback = null;
+            }
+        }
     }
 
     /**
@@ -158,13 +203,8 @@ export class GameAPI {
             game.dropFruit();
         }
         
-        // Wait for fruit to settle and merges to complete
-        // With TRAINING_PHYSICS_SPEED multiplier, times are scaled proportionally:
-        // - In fast-forward mode: DROP_COOLDOWN_MS (20ms at 20x speed = same physics time as 400ms at 1x)
-        // - In normal mode: 800ms for visual feedback and physics settling at 1x speed
-        const waitTime = this.fastForwardMode ? this.DROP_COOLDOWN_MS : 800;
-        
-        setTimeout(() => {
+        // Store the resolve callback and wait for cooldown steps to complete
+        this.actionResolveCallback = () => {
             const currentScore = game.score || 0;
             const currentMaxFruitLevel = game.currentGameMaxFruit || -1;
             const currentFruitCount = game.world ? game.world.bodies.filter(b => b.label === 'fruit').length : 0;
@@ -183,12 +223,36 @@ export class GameAPI {
                 previousMaxFruitLevel
             };
             
+            this.actionResolveCallback = null;
             this.isExecutingAction = false;
             resolve(result);
             
             // Process next action if any
             this.processActionQueue();
-        }, waitTime);
+        };
+        
+        // In fast-forward mode, use step-based cooldown
+        // In normal mode, still use timeout for visual feedback (game hasn't changed)
+        if (this.fastForwardMode) {
+            // Start cooldown counter - will be decremented in onSimulationStep()
+            this.dropCooldownCounter = this.DROP_COOLDOWN_STEPS;
+        } else {
+            // Normal mode: use timeout for visual gameplay
+            setTimeout(() => {
+                if (this.actionResolveCallback) {
+                    this.actionResolveCallback();
+                }
+            }, 800);
+        }
+    }
+    
+    /**
+     * Resolve the current action when cooldown completes
+     */
+    resolveCurrentAction() {
+        if (this.actionResolveCallback) {
+            this.actionResolveCallback();
+        }
     }
 
     /**
@@ -206,6 +270,8 @@ export class GameAPI {
             // Clear any queued actions
             this.actionQueue = [];
             this.isExecutingAction = false;
+            this.actionResolveCallback = null;
+            this.resetResolveCallback = null;
             
             // Reset the game
             if (game.handleRestart) {
@@ -216,13 +282,19 @@ export class GameAPI {
             this.previousMaxFruitLevel = -1;
             this.previousScore = 0;
             
-            // Wait for reset to complete
-            // Scaled proportionally with physics speed:
-            // - Fast-forward: FAST_RESET_TIMEOUT_MS (5ms at 20x speed)
-            // - Normal mode: NORMAL_RESET_TIMEOUT_MS (200ms at 1x speed for visual reset)
-            setTimeout(() => {
-                resolve();
-            }, this.fastForwardMode ? this.FAST_RESET_TIMEOUT_MS : this.NORMAL_RESET_TIMEOUT_MS);
+            // In fast-forward mode, use step-based cooldown with callback
+            // In normal mode, use timeout for visual reset
+            if (this.fastForwardMode) {
+                // Use the same callback pattern as drop actions for consistency
+                this.resetResolveCallback = resolve;
+                this.resetCooldownCounter = this.RESET_COOLDOWN_STEPS;
+                // Callback will be triggered by onSimulationStep when counter reaches 0
+            } else {
+                // Normal mode: use timeout for visual reset
+                setTimeout(() => {
+                    resolve();
+                }, 200);
+            }
         });
     }
 
