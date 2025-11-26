@@ -53,6 +53,10 @@ export class GameAPI {
         // Batch size for manual simulation loop (number of physics updates per JS tick)
         // Higher = faster but less responsive, Lower = more responsive but slower
         this.SIMULATION_BATCH_SIZE = 10;
+        
+        // Track the last processed simulation step to prevent double-processing
+        // This can happen when both the afterUpdate event and manual loop call onSimulationStep()
+        this.lastProcessedStep = -1;
     }
 
     /**
@@ -65,9 +69,8 @@ export class GameAPI {
         this.previousScore = gameInstance.score || 0;
         
         // Hook into the game engine's afterUpdate event to track simulation steps
-        // Only register this when NOT in fast-forward mode, as the manual loop
-        // handles onSimulationStep() calls directly for better reliability
-        if (!this.fastForwardMode && gameInstance.engine && gameInstance.Events) {
+        // This is the primary mechanism for tracking physics updates in normal mode
+        if (gameInstance.engine && gameInstance.Events) {
             gameInstance.Events.on(gameInstance.engine, 'afterUpdate', () => {
                 this.onSimulationStep();
             });
@@ -85,9 +88,18 @@ export class GameAPI {
     /**
      * Called on each simulation step (physics update)
      * Decrements cooldown counters and processes pending actions
+     * May be called from either the Matter.js afterUpdate event or the manual simulation loop
      */
     onSimulationStep() {
+        // Increment simulation step counter first
         this.simulationStep++;
+        
+        // Check if we've already processed this step (prevents double-processing
+        // when both afterUpdate event and manual loop call this method)
+        if (this.simulationStep === this.lastProcessedStep) {
+            return;
+        }
+        this.lastProcessedStep = this.simulationStep;
         
         // Log every 100 steps to avoid console spam
         if (this.simulationStep % 100 === 0) {
