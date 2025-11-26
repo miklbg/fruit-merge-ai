@@ -481,6 +481,9 @@
                 <button id="ai-menu-button" class="px-6 py-3 bg-purple-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-purple-400 transition-all">
                     🤖 AI Training
                 </button>
+                <button id="clear-cache-button" class="px-6 py-3 bg-gray-500 text-white font-bold rounded-lg shadow-lg text-xl hover:bg-gray-400 transition-all">
+                    🗑️ Clear Cache
+                </button>
             </div>
         </div>
 
@@ -658,6 +661,9 @@
             const aiBestScoreEl = document.getElementById('ai-best-score');
             const aiAvgScoreEl = document.getElementById('ai-avg-score');
             const aiEpsilonEl = document.getElementById('ai-epsilon');
+            
+            // Clear cache button
+            const clearCacheButton = document.getElementById('clear-cache-button');
 
             // --- Matter.js modules ---
             const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Common } = Matter;
@@ -2096,6 +2102,9 @@
                 aiWatchPlay.addEventListener('click', handleWatchAIPlay);
                 aiStopPlay.addEventListener('click', handleStopAIPlay);
                 aiResetTraining.addEventListener('click', handleResetTraining);
+                
+                // Clear cache event listener
+                clearCacheButton.addEventListener('click', handleClearCache);
             }
             
             // --- AI/RL Functions ---
@@ -2252,6 +2261,45 @@
                     if (stats.agentStats) {
                         aiEpsilonEl.textContent = `${(stats.agentStats.epsilon * 100).toFixed(1)}%`;
                     }
+                }
+            }
+            
+            // --- Clear Cache Function ---
+            async function handleClearCache() {
+                // Show confirmation dialog
+                const confirmed = confirm('Clear cache and reload the page?\n\nThis will:\n- Clear all cached game files\n- Force download fresh files from the server\n- Reload the page\n\nYour high score and achievements will be preserved.');
+                
+                if (!confirmed) {
+                    return;
+                }
+                
+                try {
+                    // Clear all caches
+                    if ('caches' in window) {
+                        const cacheNames = await caches.keys();
+                        await Promise.all(
+                            cacheNames.map(cacheName => caches.delete(cacheName))
+                        );
+                        console.log('All caches cleared:', cacheNames);
+                    }
+                    
+                    // Unregister all service workers
+                    if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(
+                            registrations.map(registration => registration.unregister())
+                        );
+                        console.log('All service workers unregistered');
+                    }
+                    
+                    // Show success message and reload
+                    alert('Cache cleared successfully! The page will now reload.');
+                    
+                    // Reload the page to get fresh content
+                    window.location.reload();
+                } catch (error) {
+                    console.error('Error clearing cache:', error);
+                    alert('Failed to clear cache. Please try manually clearing your browser cache.');
                 }
             }
             
