@@ -45,10 +45,42 @@ export class RLController {
             recentRewards: []
         };
         
+        // Load saved statistics
+        this.loadStats();
+        
         // Callbacks
         this.onStatsUpdate = null;
         this.onTrainingComplete = null;
         this.onEpisodeEnd = null;
+    }
+
+    /**
+     * Load statistics from localStorage
+     */
+    loadStats() {
+        try {
+            const savedStats = localStorage.getItem('fruit-merge-rl-stats');
+            if (savedStats) {
+                const parsed = JSON.parse(savedStats);
+                this.stats = {
+                    ...this.stats,
+                    ...parsed
+                };
+            }
+        } catch (error) {
+            console.error('Failed to load RL stats:', error);
+        }
+    }
+
+    /**
+     * Save statistics to localStorage
+     */
+    saveStats() {
+        try {
+            localStorage.setItem('fruit-merge-rl-stats', JSON.stringify(this.stats));
+        } catch (error) {
+            console.error('Failed to save RL stats:', error);
+        }
     }
 
     /**
@@ -93,6 +125,7 @@ export class RLController {
         // Final save
         if (this.isTraining) {
             await this.agent.saveModel();
+            this.saveStats();
             this.isTraining = false;
             
             if (this.onTrainingComplete) {
@@ -189,6 +222,11 @@ export class RLController {
         if (this.onStatsUpdate) {
             this.onStatsUpdate(this.stats);
         }
+        
+        // Save stats every 10 episodes
+        if ((episode + 1) % 10 === 0) {
+            this.saveStats();
+        }
     }
 
     /**
@@ -243,6 +281,8 @@ export class RLController {
         this.isTraining = false;
         // Save current progress
         await this.agent.saveModel();
+        // Save statistics
+        this.saveStats();
     }
 
     /**
@@ -308,6 +348,9 @@ export class RLController {
             averageReward: 0,
             recentRewards: []
         };
+        
+        // Clear saved stats
+        localStorage.removeItem('fruit-merge-rl-stats');
     }
 
     /**

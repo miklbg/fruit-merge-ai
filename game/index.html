@@ -2105,17 +2105,8 @@
                 pauseModal.classList.add('hidden');
                 // Show AI modal
                 aiModal.classList.remove('hidden');
-                // Update stats display
-                updateAIStats();
-            }
-            
-            function hideAIModal() {
-                aiModal.classList.add('hidden');
-                // Show pause menu again
-                pauseModal.classList.remove('hidden');
-            }
-            
-            async function handleStartTraining() {
+                
+                // Create rlController if it doesn't exist
                 if (!rlController) {
                     rlController = new RLController(gameAPI);
                     
@@ -2132,12 +2123,28 @@
                     };
                 }
                 
+                // Update stats display
+                updateAIStats();
+            }
+            
+            function hideAIModal() {
+                aiModal.classList.add('hidden');
+                // Show pause menu again
+                pauseModal.classList.remove('hidden');
+            }
+            
+            async function handleStartTraining() {
+                // rlController should already exist from showAIModal
+                if (!rlController) {
+                    console.error('rlController not initialized');
+                    return;
+                }
+                
                 // Enable fast-forward mode
                 gameAPI.setFastForwardMode(true);
                 isRLMode = true;
                 
-                // Hide modal and show training status
-                aiModal.classList.add('hidden');
+                // Keep AI modal open but hide pause modal
                 pauseModal.classList.add('hidden');
                 
                 // Update UI
@@ -2161,14 +2168,15 @@
                     aiStopTraining.classList.add('hidden');
                     aiTrainingStatus.classList.add('hidden');
                     
-                    // Show AI modal again
-                    aiModal.classList.remove('hidden');
+                    // AI modal should already be visible during training
                 }
             }
             
             async function handleWatchAIPlay() {
+                // rlController should already exist from showAIModal
                 if (!rlController) {
-                    rlController = new RLController(gameAPI);
+                    console.error('rlController not initialized');
+                    return;
                 }
                 
                 // Check if model exists
