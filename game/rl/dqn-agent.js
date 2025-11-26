@@ -156,20 +156,23 @@ export class DQNAgent {
         }
         
         // Batch predict for better performance - predict all states at once
-        const currentQValuesArray = await tf.tidy(() => {
+        const currentQValuesArray = tf.tidy(() => {
             const statesTensor = tf.tensor2d(states);
-            return this.model.predict(statesTensor).arraySync();
+            const predictions = this.model.predict(statesTensor);
+            return predictions.arraySync();
         });
         
-        const nextQValuesArray = await tf.tidy(() => {
+        const nextQValuesArray = tf.tidy(() => {
             const nextStatesTensor = tf.tensor2d(nextStates);
-            return this.targetModel.predict(nextStatesTensor).arraySync();
+            const predictions = this.targetModel.predict(nextStatesTensor);
+            return predictions.arraySync();
         });
         
         // Calculate targets for all experiences
         const targets = [];
         for (let i = 0; i < batch.length; i++) {
-            const targetQValues = [...currentQValuesArray[i]];
+            // Use slice() for better performance than spread operator
+            const targetQValues = currentQValuesArray[i].slice();
             
             // Calculate target Q-value
             let target = rewards[i];
