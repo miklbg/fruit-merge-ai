@@ -1397,10 +1397,8 @@
                 // IMPORTANT: This must be done BEFORE Runner.run() so that the afterUpdate
                 // event handler is registered before the runner starts
                 if (!gameAPI) {
-                    console.log('[initGame] Creating new GameAPI instance');
                     gameAPI = new GameAPI();
                 }
-                console.log('[initGame] Calling gameAPI.init with engine and Events');
                 // Inject game instance into API
                 gameAPI.init({
                     // Game world info
@@ -1447,14 +1445,9 @@
                 // Only start rendering if not in fast-forward mode (AI training)
                 // When in fast-forward mode, rendering will be explicitly stopped by setFastForwardMode
                 if (!gameAPI || !gameAPI.fastForwardMode) {
-                    console.log('[initGame] Starting render (fastForwardMode:', gameAPI ? gameAPI.fastForwardMode : 'N/A', ')');
                     Render.run(render);
-                } else {
-                    console.log('[initGame] Skipping render start due to fastForwardMode');
                 }
-                console.log('[initGame] Starting runner with engine');
                 Runner.run(runner, engine);
-                console.log('[initGame] Runner started');
                 
                 // Initialize fruit evolution row
                 initFruitEvolutionRow();
