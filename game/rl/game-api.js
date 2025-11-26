@@ -17,7 +17,11 @@ export class GameAPI {
         // training speed and physics accuracy
         this.TRAINING_PHYSICS_SPEED = 10;
         // Drop cooldown must match game's DROP_COOLDOWN_MS (400ms)
+        // TODO: Consider extracting to shared constants file to avoid duplication
         this.DROP_COOLDOWN_MS = 400;
+        // Reset timeouts for fast-forward vs normal mode
+        this.FAST_RESET_TIMEOUT_MS = 100;
+        this.NORMAL_RESET_TIMEOUT_MS = 200;
         
         // Action queue for async execution
         this.actionQueue = [];
@@ -214,11 +218,11 @@ export class GameAPI {
             this.previousScore = 0;
             
             // Wait for reset to complete
-            // Even in fast-forward mode, we need 100ms to ensure game state is fully reset
-            // In normal mode, 200ms allows for visual reset animation
+            // Even in fast-forward mode, we need time to ensure game state is fully reset
+            // In normal mode, allows for visual reset animation
             setTimeout(() => {
                 resolve();
-            }, this.fastForwardMode ? 100 : 200);
+            }, this.fastForwardMode ? this.FAST_RESET_TIMEOUT_MS : this.NORMAL_RESET_TIMEOUT_MS);
         });
     }
 
