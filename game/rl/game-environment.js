@@ -62,22 +62,17 @@ export class GameEnvironment {
      * @returns {Object} Result containing nextState, reward, done
      */
     async step(action) {
-        console.log('[GameEnvironment] step() called with action:', action);
         // Convert action to drop position (0-19 maps to positions across the screen)
         const position = (action + 0.5) / this.actionSize; // 0.025 to 0.975
-        console.log('[GameEnvironment] Calculated position:', position);
         
         // Execute the drop
-        console.log('[GameEnvironment] Calling gameAPI.executeAction()');
         const result = await this.gameAPI.executeAction(position);
-        console.log('[GameEnvironment] gameAPI.executeAction() returned:', result);
         
         // Get next state
         const nextState = this.getState();
         
         // Calculate reward
         const reward = this.calculateReward(result);
-        console.log('[GameEnvironment] Calculated reward:', reward, 'done:', result.gameOver);
         
         return {
             nextState,
@@ -130,11 +125,8 @@ export class GameEnvironment {
      * @returns {Float32Array} Initial state
      */
     async reset() {
-        console.log('[GameEnvironment] reset() called');
         await this.gameAPI.resetGame();
-        console.log('[GameEnvironment] gameAPI.resetGame() completed');
         const state = this.getState();
-        console.log('[GameEnvironment] getState() returned, state length:', state.length);
         return state;
     }
 
