@@ -1393,7 +1393,11 @@
                 updateScore(score); 
 
 
-                Render.run(render);
+                // Only start rendering if not in fast-forward mode (AI training)
+                // When in fast-forward mode, rendering will be explicitly stopped by setFastForwardMode
+                if (!gameAPI || !gameAPI.fastForwardMode) {
+                    Render.run(render);
+                }
                 Runner.run(runner, engine);
                 
                 // Initialize fruit evolution row
@@ -1671,7 +1675,10 @@
                 
                 // Update next fruit image
                 nextFruitImgEl.src = fruitData.imagePath;
-                nextFruitImgEl.style.display = 'block';
+                // Only show if not in fast-forward mode (AI training)
+                if (!gameAPI || !gameAPI.fastForwardMode) {
+                    nextFruitImgEl.style.display = 'block';
+                }
             }
             
             // --- Game Controls (for the DIV) ---
