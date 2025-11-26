@@ -53,10 +53,22 @@ export class GameAPI {
         this.previousMaxFruitLevel = gameInstance.currentGameMaxFruit || -1;
         this.previousScore = gameInstance.score || 0;
         
+        // Apply fast-forward mode settings to the (possibly new) engine
+        if (this.fastForwardMode && gameInstance.engine) {
+            console.log('[GameAPI] Applying fast-forward mode to engine (timeScale=', this.TRAINING_PHYSICS_SPEED, ')');
+            gameInstance.engine.timing.timeScale = this.TRAINING_PHYSICS_SPEED;
+        }
+        
         // Hook into the game engine's afterUpdate event to track simulation steps
         if (gameInstance.engine && gameInstance.Events) {
+            console.log('[GameAPI] Registering afterUpdate event handler');
             gameInstance.Events.on(gameInstance.engine, 'afterUpdate', () => {
                 this.onSimulationStep();
+            });
+        } else {
+            console.error('[GameAPI] Cannot register event handler - engine or Events missing:', {
+                hasEngine: !!gameInstance.engine,
+                hasEvents: !!gameInstance.Events
             });
         }
     }
@@ -68,12 +80,18 @@ export class GameAPI {
     onSimulationStep() {
         this.simulationStep++;
         
+        // Log first few steps to verify the handler is being called
+        if (this.simulationStep <= 5 || this.simulationStep % 100 === 0) {
+            console.log(`[GameAPI] onSimulationStep called: step=${this.simulationStep}, dropCounter=${this.dropCooldownCounter}, resetCounter=${this.resetCooldownCounter}`);
+        }
+        
         // Decrement drop cooldown counter
         if (this.dropCooldownCounter > 0) {
             this.dropCooldownCounter--;
             
             // Check if action is waiting for cooldown to complete
             if (this.dropCooldownCounter === 0 && this.actionResolveCallback) {
+                console.log('[GameAPI] Drop cooldown complete, resolving action');
                 this.resolveCurrentAction();
             }
         }
@@ -84,6 +102,7 @@ export class GameAPI {
             
             // Check if reset is waiting for cooldown to complete
             if (this.resetCooldownCounter === 0 && this.resetResolveCallback) {
+                console.log('[GameAPI] Reset cooldown complete, resolving reset');
                 this.resetResolveCallback();
                 this.resetResolveCallback = null;
             }
@@ -264,6 +283,8 @@ export class GameAPI {
             throw new Error('GameAPI not initialized');
         }
         
+        console.log('[GameAPI] resetGame called, fastForwardMode:', this.fastForwardMode);
+        
         return new Promise((resolve) => {
             const game = this.gameInstance;
             
@@ -275,7 +296,9 @@ export class GameAPI {
             
             // Reset the game
             if (game.handleRestart) {
+                console.log('[GameAPI] Calling handleRestart');
                 game.handleRestart();
+                console.log('[GameAPI] handleRestart completed');
             }
             
             // Reset tracking
@@ -286,11 +309,13 @@ export class GameAPI {
             // In normal mode, use timeout for visual reset
             if (this.fastForwardMode) {
                 // Use the same callback pattern as drop actions for consistency
+                console.log('[GameAPI] Fast-forward mode: waiting for', this.RESET_COOLDOWN_STEPS, 'steps');
                 this.resetResolveCallback = resolve;
                 this.resetCooldownCounter = this.RESET_COOLDOWN_STEPS;
                 // Callback will be triggered by onSimulationStep when counter reaches 0
             } else {
                 // Normal mode: use timeout for visual reset
+                console.log('[GameAPI] Normal mode: using timeout');
                 setTimeout(() => {
                     resolve();
                 }, 200);
