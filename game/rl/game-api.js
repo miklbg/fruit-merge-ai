@@ -13,8 +13,11 @@ export class GameAPI {
         // These will be set by the game
         this.gameInstance = null;
         this.fastForwardMode = false;
-        // Note: We use engine.timing.timeScale for physics speed (10x during training)
-        // instead of manipulating runner.delta to avoid breaking physics mechanics
+        // Physics speed multiplier for training - 10x provides good balance between
+        // training speed and physics accuracy
+        this.TRAINING_PHYSICS_SPEED = 10;
+        // Drop cooldown must match game's DROP_COOLDOWN_MS (400ms)
+        this.DROP_COOLDOWN_MS = 400;
         
         // Action queue for async execution
         this.actionQueue = [];
@@ -152,12 +155,11 @@ export class GameAPI {
         }
         
         // Wait for fruit to settle and merges to complete
-        // Must respect the game's DROP_COOLDOWN_MS (400ms) even in fast-forward mode
+        // Must respect the game's DROP_COOLDOWN_MS even in fast-forward mode
         // to prevent adding fruits faster than the game allows.
-        // In fast-forward mode: 400ms allows physics to settle (even at 1000x speed)
+        // In fast-forward mode: DROP_COOLDOWN_MS allows physics to settle (even at higher speed)
         // In normal mode: 800ms allows for visual feedback and physics settling
-        const DROP_COOLDOWN_MS = 400;
-        const waitTime = this.fastForwardMode ? DROP_COOLDOWN_MS : 800;
+        const waitTime = this.fastForwardMode ? this.DROP_COOLDOWN_MS : 800;
         
         setTimeout(() => {
             const currentScore = game.score || 0;
@@ -242,9 +244,8 @@ export class GameAPI {
         if (enabled) {
             // Speed up physics using engine.timing.timeScale
             // This is the proper way to speed up Matter.js physics without breaking mechanics
-            // timeScale of 10 means physics runs 10x faster
             if (game.engine) {
-                game.engine.timing.timeScale = 10; // 10x speed for training performance
+                game.engine.timing.timeScale = this.TRAINING_PHYSICS_SPEED;
             }
             // Stop rendering for performance - no visual updates needed during training
             if (game.render && game.Render && !this.renderStopped) {
