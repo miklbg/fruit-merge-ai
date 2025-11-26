@@ -2295,8 +2295,8 @@
                     // Show success message and reload
                     alert('Cache cleared successfully! The page will now reload.');
                     
-                    // Force a hard reload to get fresh content
-                    window.location.reload(true);
+                    // Reload the page to get fresh content
+                    window.location.reload();
                 } catch (error) {
                     console.error('Error clearing cache:', error);
                     alert('Failed to clear cache. Please try manually clearing your browser cache.');
