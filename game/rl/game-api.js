@@ -13,14 +13,14 @@ export class GameAPI {
         // These will be set by the game
         this.gameInstance = null;
         this.fastForwardMode = false;
-        // Physics speed multiplier for training - 10x provides good balance between
-        // training speed and physics accuracy
-        this.TRAINING_PHYSICS_SPEED = 10;
-        // Drop cooldown must match game's DROP_COOLDOWN_MS (400ms)
-        // TODO: Consider extracting to shared constants file to avoid duplication
-        this.DROP_COOLDOWN_MS = 400;
-        // Reset timeouts for fast-forward vs normal mode
-        this.FAST_RESET_TIMEOUT_MS = 100;
+        // Physics speed multiplier for training - 20x provides maximum training speed
+        // while maintaining physics accuracy
+        this.TRAINING_PHYSICS_SPEED = 20;
+        // Drop cooldown scaled for training speed (400ms / 20 = 20ms)
+        // This allows physics to settle at 20x speed in the same real-world time as 400ms at 1x speed
+        this.DROP_COOLDOWN_MS = 20;
+        // Reset timeouts for fast-forward vs normal mode (scaled proportionally)
+        this.FAST_RESET_TIMEOUT_MS = 5;
         this.NORMAL_RESET_TIMEOUT_MS = 200;
         
         // Action queue for async execution
@@ -159,10 +159,9 @@ export class GameAPI {
         }
         
         // Wait for fruit to settle and merges to complete
-        // Must respect the game's DROP_COOLDOWN_MS even in fast-forward mode
-        // to prevent adding fruits faster than the game allows.
-        // In fast-forward mode: DROP_COOLDOWN_MS allows physics to settle (even at higher speed)
-        // In normal mode: 800ms allows for visual feedback and physics settling
+        // With TRAINING_PHYSICS_SPEED multiplier, times are scaled proportionally:
+        // - In fast-forward mode: DROP_COOLDOWN_MS (20ms at 20x speed = same physics time as 400ms at 1x)
+        // - In normal mode: 800ms for visual feedback and physics settling at 1x speed
         const waitTime = this.fastForwardMode ? this.DROP_COOLDOWN_MS : 800;
         
         setTimeout(() => {
@@ -218,8 +217,9 @@ export class GameAPI {
             this.previousScore = 0;
             
             // Wait for reset to complete
-            // Even in fast-forward mode, we need time to ensure game state is fully reset
-            // In normal mode, allows for visual reset animation
+            // Scaled proportionally with physics speed:
+            // - Fast-forward: FAST_RESET_TIMEOUT_MS (5ms at 20x speed)
+            // - Normal mode: NORMAL_RESET_TIMEOUT_MS (200ms at 1x speed for visual reset)
             setTimeout(() => {
                 resolve();
             }, this.fastForwardMode ? this.FAST_RESET_TIMEOUT_MS : this.NORMAL_RESET_TIMEOUT_MS);

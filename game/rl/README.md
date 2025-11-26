@@ -140,11 +140,11 @@ const exists = await agent.modelExists('my-model-name');
 
 ### Fast-Forward Mode
 During training, the game runs significantly faster:
-- Physics speed increased by 10x using `engine.timing.timeScale`
+- Physics speed increased by 20x using `engine.timing.timeScale`
 - Rendering disabled for performance (no visual updates during training)
 - UI updates disabled for performance
-- Action execution: 400ms minimum (respects DROP_COOLDOWN_MS to prevent adding fruits faster than game allows)
-- Game reset: 100ms vs 200ms (2x faster)
+- Action execution: 20ms minimum (scaled from 400ms base cooldown, proportional to 20x physics speed)
+- Game reset: 5ms vs 200ms (40x faster, scaled proportionally)
 
 ### Training Optimizations
 - **Batch prediction**: All experiences in a batch are predicted together (32x faster than individual predictions)
@@ -155,6 +155,14 @@ During training, the game runs significantly faster:
 - Experience replay buffer capped at 10,000
 - TensorFlow tensors properly disposed with `tf.tidy()`
 - Old models cleaned up when new ones are saved
+
+### Overall Training Speed
+With these optimizations, training is approximately **20x faster** than real-time gameplay:
+- 20x physics simulation speed
+- Proportionally scaled cooldowns (20ms vs 400ms)
+- Proportionally scaled reset time (5ms vs 200ms)
+- No rendering overhead
+- Efficient batch processing
 
 ## Future Enhancements
 
