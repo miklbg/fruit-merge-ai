@@ -53,6 +53,10 @@ export class GameAPI {
         // Batch size for manual simulation loop (number of physics updates per JS tick)
         // Higher = faster but less responsive, Lower = more responsive but slower
         this.SIMULATION_BATCH_SIZE = 10;
+        
+        // Track the last processed simulation step to prevent double-processing
+        // This can happen when both the afterUpdate event and manual loop call onSimulationStep()
+        this.lastProcessedStep = -1;
     }
 
     /**
@@ -60,32 +64,48 @@ export class GameAPI {
      * @param {Object} gameInstance - Reference to game state and functions
      */
     init(gameInstance) {
+        console.log('[GameAPI] init() called, fastForwardMode:', this.fastForwardMode);
         this.gameInstance = gameInstance;
         this.previousMaxFruitLevel = gameInstance.currentGameMaxFruit || -1;
         this.previousScore = gameInstance.score || 0;
         
         // Hook into the game engine's afterUpdate event to track simulation steps
+        // This is the primary mechanism for tracking physics updates in normal mode
         if (gameInstance.engine && gameInstance.Events) {
+            console.log('[GameAPI] Registering afterUpdate event listener on engine');
             gameInstance.Events.on(gameInstance.engine, 'afterUpdate', () => {
                 this.onSimulationStep();
             });
+        } else {
+            console.log('[GameAPI] WARNING: Could not register afterUpdate event - engine:', !!gameInstance.engine, 'Events:', !!gameInstance.Events);
         }
         
         // If fast-forward mode was already enabled, restart manual simulation loop
         // to use the new engine instance
         if (this.fastForwardMode) {
+            console.log('[GameAPI] init() - fastForwardMode is true, restarting manual loop');
             // Stop any existing loop first (it may be using old engine reference)
             this.stopManualSimulationLoop();
             this.startManualSimulationLoop();
         }
+        console.log('[GameAPI] init() completed');
     }
     
     /**
      * Called on each simulation step (physics update)
      * Decrements cooldown counters and processes pending actions
+     * May be called from either the Matter.js afterUpdate event or the manual simulation loop
      */
     onSimulationStep() {
+        // Increment simulation step counter first
         this.simulationStep++;
+        
+        // Check if we've already processed this step (prevents double-processing
+        // when both afterUpdate event and manual loop call this method)
+        if (this.simulationStep === this.lastProcessedStep) {
+            return;
+        }
+        this.lastProcessedStep = this.simulationStep;
         
         // Log every 100 steps to avoid console spam
         if (this.simulationStep % 100 === 0) {
@@ -95,6 +115,11 @@ export class GameAPI {
         // Decrement drop cooldown counter
         if (this.dropCooldownCounter > 0) {
             this.dropCooldownCounter--;
+            
+            // Log when cooldown is actively decrementing (first 5 steps to avoid spam)
+            if (this.dropCooldownCounter >= this.DROP_COOLDOWN_STEPS - 5) {
+                console.log('[GameAPI] Decrementing dropCooldown:', this.dropCooldownCounter);
+            }
             
             // Check if action is waiting for cooldown to complete
             if (this.dropCooldownCounter === 0 && this.actionResolveCallback) {
@@ -106,6 +131,9 @@ export class GameAPI {
         // Decrement reset cooldown counter
         if (this.resetCooldownCounter > 0) {
             this.resetCooldownCounter--;
+            
+            // Log when reset cooldown is actively decrementing
+            console.log('[GameAPI] Decrementing resetCooldown:', this.resetCooldownCounter, 'hasCallback:', !!this.resetResolveCallback);
             
             // Check if reset is waiting for cooldown to complete
             if (this.resetCooldownCounter === 0 && this.resetResolveCallback) {
@@ -295,7 +323,7 @@ export class GameAPI {
      * @returns {Promise<void>}
      */
     async resetGame() {
-        console.log('[GameAPI] resetGame() called, fastForwardMode:', this.fastForwardMode);
+        console.log('[GameAPI] resetGame() called, fastForwardMode:', this.fastForwardMode, 'manualLoopRunning:', this.manualLoopRunning);
         if (!this.gameInstance) {
             throw new Error('GameAPI not initialized');
         }
@@ -314,6 +342,7 @@ export class GameAPI {
             if (game.handleRestart) {
                 console.log('[GameAPI] Calling game.handleRestart()');
                 game.handleRestart();
+                console.log('[GameAPI] game.handleRestart() returned, manualLoopRunning:', this.manualLoopRunning);
             }
             
             // Reset tracking
@@ -326,7 +355,8 @@ export class GameAPI {
                 // Use the same callback pattern as drop actions for consistency
                 this.resetResolveCallback = resolve;
                 this.resetCooldownCounter = this.RESET_COOLDOWN_STEPS;
-                console.log('[GameAPI] Fast-forward mode: set resetCooldownCounter to', this.RESET_COOLDOWN_STEPS);
+                console.log('[GameAPI] Fast-forward mode: set resetCooldownCounter to', this.RESET_COOLDOWN_STEPS, 'resetResolveCallback set:', !!this.resetResolveCallback);
+                console.log('[GameAPI] Current simulationStep:', this.simulationStep, 'lastProcessedStep:', this.lastProcessedStep);
                 // Callback will be triggered by onSimulationStep when counter reaches 0
             } else {
                 // Normal mode: use timeout for visual reset
@@ -427,7 +457,7 @@ export class GameAPI {
         
         this.manualLoopRunning = true;
         this.manualLoopCount = 0;  // Reset loop counter
-        console.log('[GameAPI] Starting manual simulation loop');
+        console.log('[GameAPI] Starting manual simulation loop, resetCooldown:', this.resetCooldownCounter, 'hasResetCallback:', !!this.resetResolveCallback, 'simulationStep:', this.simulationStep);
         
         // Run simulation loop
         // Note: We use this.gameInstance inside the loop instead of capturing
@@ -451,7 +481,12 @@ export class GameAPI {
             // Log every 1000 loops to show it's running
             this.manualLoopCount++;
             if (this.manualLoopCount % 1000 === 0) {
-                console.log('[GameAPI] Manual loop iteration #', this.manualLoopCount);
+                console.log('[GameAPI] Manual loop iteration #', this.manualLoopCount, 'simulationStep:', this.simulationStep, 'resetCooldown:', this.resetCooldownCounter, 'hasResetCallback:', !!this.resetResolveCallback);
+            }
+            
+            // Log first few iterations after loop starts to verify it's working
+            if (this.manualLoopCount <= 3) {
+                console.log('[GameAPI] Manual loop early iteration #', this.manualLoopCount, 'simulationStep:', this.simulationStep);
             }
             
             // Run multiple physics updates per "tick" for maximum speed
@@ -461,6 +496,12 @@ export class GameAPI {
                 // delta: time step in milliseconds (default: 1000/60 ≈ 16.67ms)
                 // correction: timing correction factor (default: 1, no correction)
                 Matter.Engine.update(this.gameInstance.engine, this.FIXED_DELTA_TIME);
+                
+                // Manually call onSimulationStep after each physics update
+                // This is needed because the Matter.js afterUpdate event may not fire
+                // consistently when using manual Engine.update() calls, especially
+                // after handleRestart() creates a new engine instance
+                this.onSimulationStep();
             }
             
             // Use setTimeout(0) to yield to the event loop
