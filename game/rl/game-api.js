@@ -6,6 +6,12 @@
  * - Executing actions
  * - Resetting the game
  * - Fast-forward mode for training
+ * 
+ * Simulation Speed Optimizations:
+ * - Turbo mode: Maximum speed with minimal cooldowns
+ * - Configurable batch sizes for physics updates
+ * - Optimized scheduling using queueMicrotask when available
+ * - Reduced cooldown steps for faster sample collection
  */
 
 export class GameAPI {
@@ -13,16 +19,24 @@ export class GameAPI {
         // These will be set by the game
         this.gameInstance = null;
         this.fastForwardMode = false;
+        this.turboMode = false; // Extra-fast mode for maximum training speed
         
         // Fixed time step for physics simulation (1/60th of a second = ~16.67ms)
         // This ensures consistent physics behavior regardless of actual speed
         this.FIXED_DELTA_TIME = 1000 / 60;
         
+        // Larger delta time for turbo mode (2x physics speed per step)
+        this.TURBO_DELTA_TIME = 1000 / 30;
+        
         // Convert time-based cooldowns to simulation steps
-        // At 60 FPS, 400ms = ~24 frames. We'll use 25 steps for safety
-        this.DROP_COOLDOWN_STEPS = 25;
-        // Reset cooldown: 200ms = ~12 frames at 60 FPS, use 10 steps
-        this.RESET_COOLDOWN_STEPS = 10;
+        // Normal fast-forward: ~400ms = 24 frames, use 15 steps (reduced for faster training)
+        this.DROP_COOLDOWN_STEPS = 15;
+        // Turbo mode: minimal cooldown, just enough for physics to settle
+        this.TURBO_DROP_COOLDOWN_STEPS = 8;
+        
+        // Reset cooldown: reduced from 10 to 5 for faster episode resets
+        this.RESET_COOLDOWN_STEPS = 5;
+        this.TURBO_RESET_COOLDOWN_STEPS = 3;
         
         // Step counters for cooldowns (replaces timeout-based approach)
         this.dropCooldownCounter = 0;
@@ -52,11 +66,16 @@ export class GameAPI {
         
         // Batch size for manual simulation loop (number of physics updates per JS tick)
         // Higher = faster but less responsive, Lower = more responsive but slower
-        this.SIMULATION_BATCH_SIZE = 10;
+        this.SIMULATION_BATCH_SIZE = 20; // Increased from 10 for faster training
+        this.TURBO_BATCH_SIZE = 50; // Even more updates per tick in turbo mode
         
         // Track the last processed simulation step to prevent double-processing
         // This can happen when both the afterUpdate event and manual loop call onSimulationStep()
         this.lastProcessedStep = -1;
+        
+        // Cache for frequently accessed values to avoid repeated lookups
+        this._cachedGameState = null;
+        this._cacheValidUntilStep = -1;
     }
 
     /**
@@ -125,49 +144,63 @@ export class GameAPI {
 
     /**
      * Get current game state as a structured object
+     * Uses caching to avoid redundant calculations within the same simulation step
+     * @param {boolean} forceRefresh - Force recalculation even if cached
      * @returns {Object} Game state
      */
-    getGameState() {
+    getGameState(forceRefresh = false) {
         if (!this.gameInstance) {
             throw new Error('GameAPI not initialized');
         }
         
+        // Return cached state if still valid
+        if (!forceRefresh && this._cachedGameState && this._cacheValidUntilStep === this.simulationStep) {
+            return this._cachedGameState;
+        }
+        
         const game = this.gameInstance;
         
-        // Count fruits by level
+        // Count fruits by level - use direct array access for performance
         const fruitLevelCounts = new Array(10).fill(0);
         let fruitCount = 0;
         let totalY = 0;
         let maxY = 0; // Lowest Y position (remember Y increases downward)
         
-        // Analyze fruits on screen
+        // Analyze fruits on screen - optimized loop
         if (game.world && game.world.bodies) {
-            const fruits = game.world.bodies.filter(b => b.label === 'fruit');
-            fruitCount = fruits.length;
-            
-            fruits.forEach(fruit => {
-                if (fruit.fruitLevel !== undefined) {
-                    fruitLevelCounts[fruit.fruitLevel]++;
+            const bodies = game.world.bodies;
+            const len = bodies.length;
+            for (let i = 0; i < len; i++) {
+                const body = bodies[i];
+                if (body.label === 'fruit') {
+                    fruitCount++;
+                    if (body.fruitLevel !== undefined && body.fruitLevel < 10) {
+                        fruitLevelCounts[body.fruitLevel]++;
+                    }
+                    const y = body.position.y;
+                    totalY += y;
+                    if (y > maxY) maxY = y;
                 }
-                totalY += fruit.position.y;
-                maxY = Math.max(maxY, fruit.position.y);
-            });
+            }
         }
         
+        const gameWorldHeight = game.gameWorldHeight;
         const avgFruitY = fruitCount > 0 ? totalY / fruitCount : 0;
         
         // Normalize Y positions (0 = top, 1 = bottom)
-        const normalizedAvgY = avgFruitY / game.gameWorldHeight;
-        const normalizedMaxY = maxY / game.gameWorldHeight;
+        const normalizedAvgY = avgFruitY / gameWorldHeight;
+        const normalizedMaxY = maxY / gameWorldHeight;
         
         // Calculate fill level (how close fruits are to game over line)
-        const gameOverLineY = game.gameOverLineY || (game.gameWorldHeight * 0.18);
-        const fillLevel = Math.min(1, Math.max(0, 1 - (gameOverLineY / (maxY || game.gameWorldHeight))));
+        const gameOverLineY = game.gameOverLineY || (gameWorldHeight * 0.18);
+        const fillLevel = Math.min(1, Math.max(0, 1 - (gameOverLineY / (maxY || gameWorldHeight))));
         
-        // Time since last drop
-        const timeSinceLastDrop = Date.now() - (game.lastDropTime || 0);
+        // Time since last drop - use simulation steps in fast-forward mode for consistency
+        const timeSinceLastDrop = this.fastForwardMode 
+            ? (this.simulationStep - (game.lastDropStep || 0)) * this.FIXED_DELTA_TIME
+            : Date.now() - (game.lastDropTime || 0);
         
-        return {
+        const state = {
             score: game.score || 0,
             currentFruitLevel: game.currentFruitLevel || 0,
             nextFruitLevel: game.nextFruitLevel || 0,
@@ -181,6 +214,12 @@ export class GameAPI {
             warningActive: game.isWarningActive || false,
             gameOver: game.isGameOver || false
         };
+        
+        // Cache the state
+        this._cachedGameState = state;
+        this._cacheValidUntilStep = this.simulationStep;
+        
+        return state;
     }
 
     /**
@@ -213,7 +252,15 @@ export class GameAPI {
         const game = this.gameInstance;
         const previousScore = game.score || 0;
         const previousMaxFruitLevel = game.currentGameMaxFruit || -1;
-        const previousFruitCount = game.world ? game.world.bodies.filter(b => b.label === 'fruit').length : 0;
+        
+        // Count fruits directly for performance (avoid filter)
+        let previousFruitCount = 0;
+        if (game.world && game.world.bodies) {
+            const bodies = game.world.bodies;
+            for (let i = 0; i < bodies.length; i++) {
+                if (bodies[i].label === 'fruit') previousFruitCount++;
+            }
+        }
         
         // Convert normalized position to game coordinates
         const gameWorldWidth = game.gameWorldWidth;
@@ -236,15 +283,28 @@ export class GameAPI {
             game.dropFruit();
         }
         
+        // Track drop step for simulation-based timing
+        game.lastDropStep = this.simulationStep;
+        
         // Store the resolve callback and wait for cooldown steps to complete
         this.actionResolveCallback = () => {
             const currentScore = game.score || 0;
             const currentMaxFruitLevel = game.currentGameMaxFruit || -1;
-            const currentFruitCount = game.world ? game.world.bodies.filter(b => b.label === 'fruit').length : 0;
+            
+            // Count fruits directly for performance
+            let currentFruitCount = 0;
+            if (game.world && game.world.bodies) {
+                const bodies = game.world.bodies;
+                for (let i = 0; i < bodies.length; i++) {
+                    if (bodies[i].label === 'fruit') currentFruitCount++;
+                }
+            }
             
             const scoreGained = currentScore - previousScore;
             const mergeCount = Math.max(0, previousFruitCount - currentFruitCount + 1);
             
+            // Invalidate cache before getting state
+            this._cacheValidUntilStep = -1;
             const state = this.getGameState();
             
             const result = {
@@ -267,8 +327,10 @@ export class GameAPI {
         // In fast-forward mode, use step-based cooldown
         // In normal mode, still use timeout for visual feedback (game hasn't changed)
         if (this.fastForwardMode) {
-            // Start cooldown counter - will be decremented in onSimulationStep()
-            this.dropCooldownCounter = this.DROP_COOLDOWN_STEPS;
+            // Use turbo cooldown if in turbo mode, otherwise normal fast-forward cooldown
+            this.dropCooldownCounter = this.turboMode 
+                ? this.TURBO_DROP_COOLDOWN_STEPS 
+                : this.DROP_COOLDOWN_STEPS;
         } else {
             // Normal mode: use timeout for visual gameplay
             setTimeout(() => {
@@ -306,6 +368,10 @@ export class GameAPI {
             this.actionResolveCallback = null;
             this.resetResolveCallback = null;
             
+            // Invalidate state cache
+            this._cacheValidUntilStep = -1;
+            this._cachedGameState = null;
+            
             // Reset the game
             if (game.handleRestart) {
                 game.handleRestart();
@@ -318,9 +384,11 @@ export class GameAPI {
             // In fast-forward mode, use step-based cooldown with callback
             // In normal mode, use timeout for visual reset
             if (this.fastForwardMode) {
-                // Use the same callback pattern as drop actions for consistency
+                // Use turbo cooldown if in turbo mode
                 this.resetResolveCallback = resolve;
-                this.resetCooldownCounter = this.RESET_COOLDOWN_STEPS;
+                this.resetCooldownCounter = this.turboMode 
+                    ? this.TURBO_RESET_COOLDOWN_STEPS 
+                    : this.RESET_COOLDOWN_STEPS;
                 // Callback will be triggered by onSimulationStep when counter reaches 0
             } else {
                 // Normal mode: use timeout for visual reset
@@ -344,9 +412,12 @@ export class GameAPI {
      * In fast-forward mode, we bypass the Runner and manually call Engine.update()
      * as fast as calculations finish (not tied to real-time or requestAnimationFrame)
      * @param {boolean} enabled
+     * @param {Object} options - Optional configuration
+     * @param {boolean} options.turbo - Enable turbo mode for maximum speed (default: true)
      */
-    setFastForwardMode(enabled) {
+    setFastForwardMode(enabled, options = {}) {
         this.fastForwardMode = enabled;
+        this.turboMode = options.turbo !== false; // Default to turbo mode when fast-forward is enabled
         
         if (!this.gameInstance) {
             return;
@@ -370,6 +441,7 @@ export class GameAPI {
         } else {
             // Stop manual simulation loop
             this.stopManualSimulationLoop();
+            this.turboMode = false;
             
             // Resume rendering
             if (game.render && game.Render && this.renderStopped) {
@@ -392,6 +464,7 @@ export class GameAPI {
     /**
      * Start manual simulation loop that runs as fast as calculations finish
      * Bypasses requestAnimationFrame and runs physics in a tight loop
+     * Uses queueMicrotask for faster scheduling when available
      */
     startManualSimulationLoop() {
         if (this.manualLoopRunning) {
@@ -410,6 +483,17 @@ export class GameAPI {
         
         this.manualLoopRunning = true;
         this.manualLoopCount = 0;  // Reset loop counter
+        
+        // Choose batch size based on turbo mode
+        const batchSize = this.turboMode ? this.TURBO_BATCH_SIZE : this.SIMULATION_BATCH_SIZE;
+        
+        // Choose delta time based on turbo mode (larger steps = faster but less accurate)
+        const deltaTime = this.turboMode ? this.TURBO_DELTA_TIME : this.FIXED_DELTA_TIME;
+        
+        // Use queueMicrotask for faster scheduling if available, otherwise setTimeout(0)
+        const scheduleNext = typeof queueMicrotask !== 'undefined' 
+            ? (fn) => queueMicrotask(fn)
+            : (fn) => setTimeout(fn, 0);
         
         // Run simulation loop
         // Note: We use this.gameInstance inside the loop instead of capturing
@@ -430,24 +514,38 @@ export class GameAPI {
             
             this.manualLoopCount++;
             
+            // Get current batch size (may change if turbo mode is toggled)
+            const currentBatchSize = this.turboMode ? this.TURBO_BATCH_SIZE : this.SIMULATION_BATCH_SIZE;
+            const currentDeltaTime = this.turboMode ? this.TURBO_DELTA_TIME : this.FIXED_DELTA_TIME;
+            
             // Run multiple physics updates per "tick" for maximum speed
-            for (let i = 0; i < this.SIMULATION_BATCH_SIZE; i++) {
+            for (let i = 0; i < currentBatchSize; i++) {
                 // Manually update the physics engine with fixed time step
                 // Matter.js Engine.update(engine, delta, correction)
-                // delta: time step in milliseconds (default: 1000/60 ≈ 16.67ms)
+                // delta: time step in milliseconds
                 // correction: timing correction factor (default: 1, no correction)
-                Matter.Engine.update(this.gameInstance.engine, this.FIXED_DELTA_TIME);
+                Matter.Engine.update(this.gameInstance.engine, currentDeltaTime);
                 
                 // Manually call onSimulationStep after each physics update
                 // This is needed because the Matter.js afterUpdate event may not fire
                 // consistently when using manual Engine.update() calls, especially
                 // after handleRestart() creates a new engine instance
                 this.onSimulationStep();
+                
+                // Early exit if action completed (no need to simulate more)
+                if (!this.dropCooldownCounter && !this.resetCooldownCounter && !this.actionResolveCallback && !this.resetResolveCallback) {
+                    // No pending operations, but continue loop for physics settling
+                }
             }
             
-            // Use setTimeout(0) to yield to the event loop
-            // This allows promises to resolve and prevents blocking
-            this.manualLoopTimeoutId = setTimeout(runLoop, 0);
+            // Schedule next iteration
+            // Use setTimeout for every 100th iteration to prevent stack overflow
+            // and allow other async operations to complete
+            if (this.manualLoopCount % 100 === 0) {
+                this.manualLoopTimeoutId = setTimeout(runLoop, 0);
+            } else {
+                scheduleNext(runLoop);
+            }
         };
         
         // Start the loop
@@ -462,6 +560,47 @@ export class GameAPI {
         if (this.manualLoopTimeoutId !== null) {
             clearTimeout(this.manualLoopTimeoutId);
             this.manualLoopTimeoutId = null;
+        }
+    }
+    
+    /**
+     * Get simulation statistics for monitoring training speed
+     * @returns {Object} Simulation stats
+     */
+    getSimulationStats() {
+        return {
+            simulationStep: this.simulationStep,
+            loopCount: this.manualLoopCount,
+            fastForwardMode: this.fastForwardMode,
+            turboMode: this.turboMode,
+            batchSize: this.turboMode ? this.TURBO_BATCH_SIZE : this.SIMULATION_BATCH_SIZE,
+            dropCooldownSteps: this.turboMode ? this.TURBO_DROP_COOLDOWN_STEPS : this.DROP_COOLDOWN_STEPS,
+            resetCooldownSteps: this.turboMode ? this.TURBO_RESET_COOLDOWN_STEPS : this.RESET_COOLDOWN_STEPS
+        };
+    }
+    
+    /**
+     * Configure simulation speed parameters
+     * @param {Object} config - Configuration options
+     */
+    configureSpeed(config = {}) {
+        if (config.simulationBatchSize !== undefined) {
+            this.SIMULATION_BATCH_SIZE = config.simulationBatchSize;
+        }
+        if (config.turboBatchSize !== undefined) {
+            this.TURBO_BATCH_SIZE = config.turboBatchSize;
+        }
+        if (config.dropCooldownSteps !== undefined) {
+            this.DROP_COOLDOWN_STEPS = config.dropCooldownSteps;
+        }
+        if (config.turboDropCooldownSteps !== undefined) {
+            this.TURBO_DROP_COOLDOWN_STEPS = config.turboDropCooldownSteps;
+        }
+        if (config.resetCooldownSteps !== undefined) {
+            this.RESET_COOLDOWN_STEPS = config.resetCooldownSteps;
+        }
+        if (config.turboResetCooldownSteps !== undefined) {
+            this.TURBO_RESET_COOLDOWN_STEPS = config.turboResetCooldownSteps;
         }
     }
 

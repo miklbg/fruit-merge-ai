@@ -1,6 +1,11 @@
 /**
  * RL Controller - Manages training and playback modes
  * Coordinates between the DQN agent and the game environment
+ * 
+ * Optimizations:
+ * - Uses optimized DQN agent with Double DQN, PER, and learning rate scheduling
+ * - Configurable training frequency for performance tuning
+ * - Supports turbo mode for maximum simulation speed
  */
 
 import { DQNAgent } from './dqn-agent.js';
@@ -11,19 +16,28 @@ export class RLController {
         this.gameAPI = gameAPI;
         this.environment = new GameEnvironment(gameAPI);
         
-        // Create DQN agent
+        // Create DQN agent with optimized hyperparameters
         this.agent = new DQNAgent(
             this.environment.getStateSize(),
             this.environment.getActionSize(),
             {
-                gamma: 0.95,
+                // Improved hyperparameters for better learning
+                gamma: 0.99,              // Higher discount for long-term planning
                 epsilon: 1.0,
-                epsilonMin: 0.01,
-                epsilonDecay: 0.995,
-                learningRate: 0.001,
-                batchSize: 32,
-                updateTargetEvery: 10,
-                memorySize: 10000
+                epsilonMin: 0.05,         // Higher min for continued exploration
+                epsilonDecay: 0.997,      // Slower decay
+                learningRate: 0.0005,     // Lower LR for stability
+                learningRateMin: 0.00001,
+                learningRateDecay: 0.9995,
+                batchSize: 64,            // Larger batch for stable gradients
+                updateTargetEvery: 5,     // More frequent updates
+                memorySize: 50000,        // Larger buffer
+                
+                // Advanced optimizations
+                useDoubleDQN: true,
+                usePER: true,
+                useSoftUpdate: true,
+                tau: 0.005                // Soft update coefficient
             }
         );
         
@@ -33,7 +47,8 @@ export class RLController {
         this.isPaused = false;
         
         // Training optimization: train every N steps instead of every step
-        this.trainEverySteps = 4; // Train once every 4 steps for better performance
+        // Reduced from 4 to 2 for more frequent learning with larger batches
+        this.trainEverySteps = 2;
         
         // Statistics
         // Note: totalEpisodes and totalSteps are cumulative across all training sessions
@@ -47,7 +62,9 @@ export class RLController {
             averageScore: 0,
             recentScores: [],
             averageReward: 0,
-            recentRewards: []
+            recentRewards: [],
+            stepsPerSecond: 0,
+            lastStepTime: 0
         };
         
         // Load saved statistics
@@ -57,6 +74,11 @@ export class RLController {
         this.onStatsUpdate = null;
         this.onTrainingComplete = null;
         this.onEpisodeEnd = null;
+        
+        // Performance tracking
+        this._stepStartTime = 0;
+        this._stepsInLastSecond = 0;
+        this._lastSpeedUpdate = 0;
     }
 
     /**
@@ -148,6 +170,9 @@ export class RLController {
         this.stats.currentEpisode = episode + 1;
         this.stats.currentScore = 0;
         
+        // Track episode start time for speed calculation
+        const episodeStartTime = performance.now();
+        
         for (let step = 0; step < maxSteps; step++) {
             if (!this.isTraining || this.isPaused) {
                 break;
@@ -163,7 +188,6 @@ export class RLController {
             this.agent.remember(state, action, reward, nextState, done);
             
             // Train the agent periodically (every N steps) for better performance
-            // Training every step is expensive; training every few steps is more efficient
             if (this.agent.memory.length >= this.agent.batchSize && step % this.trainEverySteps === 0) {
                 await this.agent.replay();
             }
@@ -173,13 +197,22 @@ export class RLController {
             totalReward += reward;
             stepCount++;
             this.stats.totalSteps++;
+            this._stepsInLastSecond++;
+            
+            // Update speed calculation every second
+            const now = performance.now();
+            if (now - this._lastSpeedUpdate >= 1000) {
+                this.stats.stepsPerSecond = this._stepsInLastSecond;
+                this._stepsInLastSecond = 0;
+                this._lastSpeedUpdate = now;
+            }
             
             // Update current score
             const gameState = this.gameAPI.getGameState();
             this.stats.currentScore = gameState.score;
             
-            // Update stats periodically (less frequently to reduce overhead)
-            if (step % 20 === 0 && this.onStatsUpdate) {
+            // Update stats less frequently to reduce overhead (every 50 steps instead of 20)
+            if (step % 50 === 0 && this.onStatsUpdate) {
                 this.onStatsUpdate(this.stats);
             }
             
@@ -187,6 +220,9 @@ export class RLController {
                 break;
             }
         }
+        
+        // Calculate episode duration
+        const episodeDuration = (performance.now() - episodeStartTime) / 1000;
         
         // End of episode
         this.agent.endEpisode();
@@ -218,7 +254,9 @@ export class RLController {
                 score: finalScore,
                 steps: stepCount,
                 reward: totalReward,
-                epsilon: this.agent.epsilon
+                epsilon: this.agent.epsilon,
+                duration: episodeDuration,
+                stepsPerSecond: stepCount / episodeDuration
             });
         }
         
@@ -322,9 +360,11 @@ export class RLController {
      * @returns {Object}
      */
     getStats() {
+        const simStats = this.gameAPI.getSimulationStats ? this.gameAPI.getSimulationStats() : {};
         return {
             ...this.stats,
-            agentStats: this.agent.getStats()
+            agentStats: this.agent.getStats(),
+            simulationStats: simStats
         };
     }
 
