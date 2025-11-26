@@ -31,6 +31,7 @@ export class GameAPI {
         this.actionQueue = [];
         this.isExecutingAction = false;
         this.actionResolveCallback = null;
+        this.resetResolveCallback = null;
         
         // State tracking
         this.previousMaxFruitLevel = -1;
@@ -67,7 +68,7 @@ export class GameAPI {
     onSimulationStep() {
         this.simulationStep++;
         
-        // Decrement cooldown counters
+        // Decrement drop cooldown counter
         if (this.dropCooldownCounter > 0) {
             this.dropCooldownCounter--;
             
@@ -77,8 +78,15 @@ export class GameAPI {
             }
         }
         
+        // Decrement reset cooldown counter
         if (this.resetCooldownCounter > 0) {
             this.resetCooldownCounter--;
+            
+            // Check if reset is waiting for cooldown to complete
+            if (this.resetCooldownCounter === 0 && this.resetResolveCallback) {
+                this.resetResolveCallback();
+                this.resetResolveCallback = null;
+            }
         }
     }
 
@@ -263,6 +271,7 @@ export class GameAPI {
             this.actionQueue = [];
             this.isExecutingAction = false;
             this.actionResolveCallback = null;
+            this.resetResolveCallback = null;
             
             // Reset the game
             if (game.handleRestart) {
@@ -273,26 +282,13 @@ export class GameAPI {
             this.previousMaxFruitLevel = -1;
             this.previousScore = 0;
             
-            // In fast-forward mode, use step-based cooldown
+            // In fast-forward mode, use step-based cooldown with callback
             // In normal mode, use timeout for visual reset
             if (this.fastForwardMode) {
-                // Start reset cooldown counter
+                // Use the same callback pattern as drop actions for consistency
+                this.resetResolveCallback = resolve;
                 this.resetCooldownCounter = this.RESET_COOLDOWN_STEPS;
-                
-                // Wait for cooldown to complete by polling
-                const checkReset = () => {
-                    if (this.resetCooldownCounter === 0) {
-                        resolve();
-                    } else {
-                        // Check again on next animation frame (or immediately if no RAF)
-                        if (typeof requestAnimationFrame !== 'undefined') {
-                            requestAnimationFrame(checkReset);
-                        } else {
-                            setTimeout(checkReset, 0);
-                        }
-                    }
-                };
-                checkReset();
+                // Callback will be triggered by onSimulationStep when counter reaches 0
             } else {
                 // Normal mode: use timeout for visual reset
                 setTimeout(() => {
