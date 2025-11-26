@@ -140,10 +140,11 @@ const exists = await agent.modelExists('my-model-name');
 
 ### Fast-Forward Mode
 During training, the game runs significantly faster:
-- Physics delta reduced by 1000x (`1000/60/1000`)
+- Physics speed increased by 10x using `engine.timing.timeScale`
+- Rendering disabled for performance (no visual updates during training)
 - UI updates disabled for performance
-- Action execution: 1ms vs 800ms (800x faster)
-- Game reset: 1ms vs 200ms (200x faster)
+- Action execution: 400ms minimum (respects DROP_COOLDOWN_MS to prevent adding fruits faster than game allows)
+- Game reset: 100ms vs 200ms (2x faster)
 
 ### Training Optimizations
 - **Batch prediction**: All experiences in a batch are predicted together (32x faster than individual predictions)

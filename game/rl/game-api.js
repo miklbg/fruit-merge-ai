@@ -13,7 +13,15 @@ export class GameAPI {
         // These will be set by the game
         this.gameInstance = null;
         this.fastForwardMode = false;
-        this.fastForwardMultiplier = 1000; // Speed up physics 1000x for training
+        // Physics speed multiplier for training - 10x provides good balance between
+        // training speed and physics accuracy
+        this.TRAINING_PHYSICS_SPEED = 10;
+        // Drop cooldown must match game's DROP_COOLDOWN_MS (400ms)
+        // TODO: Consider extracting to shared constants file to avoid duplication
+        this.DROP_COOLDOWN_MS = 400;
+        // Reset timeouts for fast-forward vs normal mode
+        this.FAST_RESET_TIMEOUT_MS = 100;
+        this.NORMAL_RESET_TIMEOUT_MS = 200;
         
         // Action queue for async execution
         this.actionQueue = [];
@@ -151,9 +159,11 @@ export class GameAPI {
         }
         
         // Wait for fruit to settle and merges to complete
-        // In fast-forward mode (1000x physics speed), we only need 1ms
-        // In normal mode, 800ms allows for visual feedback and physics settling
-        const waitTime = this.fastForwardMode ? 1 : 800;
+        // Must respect the game's DROP_COOLDOWN_MS even in fast-forward mode
+        // to prevent adding fruits faster than the game allows.
+        // In fast-forward mode: DROP_COOLDOWN_MS allows physics to settle (even at higher speed)
+        // In normal mode: 800ms allows for visual feedback and physics settling
+        const waitTime = this.fastForwardMode ? this.DROP_COOLDOWN_MS : 800;
         
         setTimeout(() => {
             const currentScore = game.score || 0;
@@ -208,11 +218,11 @@ export class GameAPI {
             this.previousScore = 0;
             
             // Wait for reset to complete
-            // In fast-forward mode (1000x physics speed), minimal wait is needed
-            // In normal mode, 200ms allows for visual reset animation
+            // Even in fast-forward mode, we need time to ensure game state is fully reset
+            // In normal mode, allows for visual reset animation
             setTimeout(() => {
                 resolve();
-            }, this.fastForwardMode ? 1 : 200);
+            }, this.fastForwardMode ? this.FAST_RESET_TIMEOUT_MS : this.NORMAL_RESET_TIMEOUT_MS);
         });
     }
 
@@ -236,11 +246,12 @@ export class GameAPI {
         const game = this.gameInstance;
         
         if (enabled) {
-            // Speed up physics
-            if (game.runner) {
-                game.runner.delta = 1000 / 60 / this.fastForwardMultiplier;
+            // Speed up physics using engine.timing.timeScale
+            // This is the proper way to speed up Matter.js physics without breaking mechanics
+            if (game.engine) {
+                game.engine.timing.timeScale = this.TRAINING_PHYSICS_SPEED;
             }
-            // Stop rendering for performance
+            // Stop rendering for performance - no visual updates needed during training
             if (game.render && game.Render && !this.renderStopped) {
                 game.Render.stop(game.render);
                 this.renderStopped = true;
@@ -251,8 +262,8 @@ export class GameAPI {
             if (game.previewFruitEl) game.previewFruitEl.style.display = 'none';
         } else {
             // Normal speed
-            if (game.runner) {
-                game.runner.delta = 1000 / 60;
+            if (game.engine) {
+                game.engine.timing.timeScale = 1; // Reset to normal speed
             }
             // Resume rendering
             if (game.render && game.Render && this.renderStopped) {
