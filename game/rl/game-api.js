@@ -382,9 +382,8 @@ export class GameAPI {
         if (!this.gameInstance || !this.gameInstance.engine) return;
         
         // Stop the Runner to prevent double-updates
-        const game = this.gameInstance;
-        if (game.Runner && game.runner && !this.runnerStopped) {
-            game.Runner.stop(game.runner);
+        if (this.gameInstance.Runner && this.gameInstance.runner && !this.runnerStopped) {
+            this.gameInstance.Runner.stop(this.gameInstance.runner);
             this.runnerStopped = true;
         }
         
@@ -401,7 +400,9 @@ export class GameAPI {
             
             // Check if game instance is still valid
             if (!this.gameInstance || !this.gameInstance.engine) {
+                // Stop the loop cleanly
                 this.manualLoopRunning = false;
+                this.manualLoopTimeoutId = null;
                 return;
             }
             
