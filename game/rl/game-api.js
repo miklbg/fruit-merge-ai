@@ -13,7 +13,8 @@ export class GameAPI {
         // These will be set by the game
         this.gameInstance = null;
         this.fastForwardMode = false;
-        this.fastForwardMultiplier = 1000; // Speed up physics 1000x for training
+        // Note: We use engine.timing.timeScale for physics speed (10x during training)
+        // instead of manipulating runner.delta to avoid breaking physics mechanics
         
         // Action queue for async execution
         this.actionQueue = [];
@@ -151,9 +152,12 @@ export class GameAPI {
         }
         
         // Wait for fruit to settle and merges to complete
-        // In fast-forward mode (1000x physics speed), we only need 1ms
-        // In normal mode, 800ms allows for visual feedback and physics settling
-        const waitTime = this.fastForwardMode ? 1 : 800;
+        // Must respect the game's DROP_COOLDOWN_MS (400ms) even in fast-forward mode
+        // to prevent adding fruits faster than the game allows.
+        // In fast-forward mode: 400ms allows physics to settle (even at 1000x speed)
+        // In normal mode: 800ms allows for visual feedback and physics settling
+        const DROP_COOLDOWN_MS = 400;
+        const waitTime = this.fastForwardMode ? DROP_COOLDOWN_MS : 800;
         
         setTimeout(() => {
             const currentScore = game.score || 0;
@@ -208,11 +212,11 @@ export class GameAPI {
             this.previousScore = 0;
             
             // Wait for reset to complete
-            // In fast-forward mode (1000x physics speed), minimal wait is needed
+            // Even in fast-forward mode, we need 100ms to ensure game state is fully reset
             // In normal mode, 200ms allows for visual reset animation
             setTimeout(() => {
                 resolve();
-            }, this.fastForwardMode ? 1 : 200);
+            }, this.fastForwardMode ? 100 : 200);
         });
     }
 
@@ -236,11 +240,13 @@ export class GameAPI {
         const game = this.gameInstance;
         
         if (enabled) {
-            // Speed up physics
-            if (game.runner) {
-                game.runner.delta = 1000 / 60 / this.fastForwardMultiplier;
+            // Speed up physics using engine.timing.timeScale
+            // This is the proper way to speed up Matter.js physics without breaking mechanics
+            // timeScale of 10 means physics runs 10x faster
+            if (game.engine) {
+                game.engine.timing.timeScale = 10; // 10x speed for training performance
             }
-            // Stop rendering for performance
+            // Stop rendering for performance - no visual updates needed during training
             if (game.render && game.Render && !this.renderStopped) {
                 game.Render.stop(game.render);
                 this.renderStopped = true;
@@ -251,8 +257,8 @@ export class GameAPI {
             if (game.previewFruitEl) game.previewFruitEl.style.display = 'none';
         } else {
             // Normal speed
-            if (game.runner) {
-                game.runner.delta = 1000 / 60;
+            if (game.engine) {
+                game.engine.timing.timeScale = 1; // Reset to normal speed
             }
             // Resume rendering
             if (game.render && game.Render && this.renderStopped) {
