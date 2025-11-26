@@ -1440,15 +1440,21 @@
                     // Game functions
                     moveFruit,
                     dropFruit,
-                    handleRestart
+                    handleRestart: () => {
+                        // Clear animation flag to allow reset during AI training
+                        // This is necessary because handleRestart() returns early if isGameOverAnimating is true
+                        isGameOverAnimating = false;
+                        handleRestart();
+                    }
                 });
 
-                // Only start rendering if not in fast-forward mode (AI training)
+                // Only start rendering and runner if not in fast-forward mode (AI training)
                 // When in fast-forward mode, rendering will be explicitly stopped by setFastForwardMode
+                // and the runner should not start to avoid double-updates with the manual simulation loop
                 if (!gameAPI || !gameAPI.fastForwardMode) {
                     Render.run(render);
+                    Runner.run(runner, engine);
                 }
-                Runner.run(runner, engine);
                 
                 // Initialize fruit evolution row
                 initFruitEvolutionRow();
