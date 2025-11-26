@@ -48,6 +48,7 @@ export class GameAPI {
         // Manual simulation loop control
         this.manualLoopRunning = false;
         this.manualLoopTimeoutId = null;
+        this.manualLoopCount = 0;  // Counter for loop iterations (for logging)
         
         // Batch size for manual simulation loop (number of physics updates per JS tick)
         // Higher = faster but less responsive, Lower = more responsive but slower
@@ -86,12 +87,18 @@ export class GameAPI {
     onSimulationStep() {
         this.simulationStep++;
         
+        // Log every 100 steps to avoid console spam
+        if (this.simulationStep % 100 === 0) {
+            console.log('[GameAPI] onSimulationStep #', this.simulationStep, 'dropCooldown:', this.dropCooldownCounter, 'resetCooldown:', this.resetCooldownCounter);
+        }
+        
         // Decrement drop cooldown counter
         if (this.dropCooldownCounter > 0) {
             this.dropCooldownCounter--;
             
             // Check if action is waiting for cooldown to complete
             if (this.dropCooldownCounter === 0 && this.actionResolveCallback) {
+                console.log('[GameAPI] dropCooldownCounter reached 0, triggering actionResolveCallback');
                 this.resolveCurrentAction();
             }
         }
@@ -102,6 +109,7 @@ export class GameAPI {
             
             // Check if reset is waiting for cooldown to complete
             if (this.resetCooldownCounter === 0 && this.resetResolveCallback) {
+                console.log('[GameAPI] resetCooldownCounter reached 0, triggering resetResolveCallback');
                 this.resetResolveCallback();
                 this.resetResolveCallback = null;
             }
@@ -174,11 +182,13 @@ export class GameAPI {
      * @returns {Promise<Object>} Action result
      */
     async executeAction(position) {
+        console.log('[GameAPI] executeAction() called with position:', position);
         if (!this.gameInstance) {
             throw new Error('GameAPI not initialized');
         }
         
         return new Promise((resolve) => {
+            console.log('[GameAPI] Adding action to queue, queue length:', this.actionQueue.length);
             this.actionQueue.push({ position, resolve });
             this.processActionQueue();
         });
@@ -188,12 +198,15 @@ export class GameAPI {
      * Process queued actions
      */
     async processActionQueue() {
+        console.log('[GameAPI] processActionQueue() - isExecutingAction:', this.isExecutingAction, 'queueLength:', this.actionQueue.length);
         if (this.isExecutingAction || this.actionQueue.length === 0) {
+            console.log('[GameAPI] processActionQueue() returning early');
             return;
         }
         
         this.isExecutingAction = true;
         const { position, resolve } = this.actionQueue.shift();
+        console.log('[GameAPI] Processing action at position:', position);
         
         const game = this.gameInstance;
         const previousScore = game.score || 0;
@@ -223,6 +236,7 @@ export class GameAPI {
         
         // Store the resolve callback and wait for cooldown steps to complete
         this.actionResolveCallback = () => {
+            console.log('[GameAPI] Action resolve callback triggered');
             const currentScore = game.score || 0;
             const currentMaxFruitLevel = game.currentGameMaxFruit || -1;
             const currentFruitCount = game.world ? game.world.bodies.filter(b => b.label === 'fruit').length : 0;
@@ -241,6 +255,7 @@ export class GameAPI {
                 previousMaxFruitLevel
             };
             
+            console.log('[GameAPI] Action result:', result);
             this.actionResolveCallback = null;
             this.isExecutingAction = false;
             resolve(result);
@@ -254,8 +269,10 @@ export class GameAPI {
         if (this.fastForwardMode) {
             // Start cooldown counter - will be decremented in onSimulationStep()
             this.dropCooldownCounter = this.DROP_COOLDOWN_STEPS;
+            console.log('[GameAPI] Fast-forward mode: set dropCooldownCounter to', this.DROP_COOLDOWN_STEPS);
         } else {
             // Normal mode: use timeout for visual gameplay
+            console.log('[GameAPI] Normal mode: using setTimeout for 800ms');
             setTimeout(() => {
                 if (this.actionResolveCallback) {
                     this.actionResolveCallback();
@@ -278,6 +295,7 @@ export class GameAPI {
      * @returns {Promise<void>}
      */
     async resetGame() {
+        console.log('[GameAPI] resetGame() called, fastForwardMode:', this.fastForwardMode);
         if (!this.gameInstance) {
             throw new Error('GameAPI not initialized');
         }
@@ -290,9 +308,11 @@ export class GameAPI {
             this.isExecutingAction = false;
             this.actionResolveCallback = null;
             this.resetResolveCallback = null;
+            console.log('[GameAPI] Cleared action queue and callbacks');
             
             // Reset the game
             if (game.handleRestart) {
+                console.log('[GameAPI] Calling game.handleRestart()');
                 game.handleRestart();
             }
             
@@ -306,9 +326,11 @@ export class GameAPI {
                 // Use the same callback pattern as drop actions for consistency
                 this.resetResolveCallback = resolve;
                 this.resetCooldownCounter = this.RESET_COOLDOWN_STEPS;
+                console.log('[GameAPI] Fast-forward mode: set resetCooldownCounter to', this.RESET_COOLDOWN_STEPS);
                 // Callback will be triggered by onSimulationStep when counter reaches 0
             } else {
                 // Normal mode: use timeout for visual reset
+                console.log('[GameAPI] Normal mode: using setTimeout for 200ms');
                 setTimeout(() => {
                     resolve();
                 }, 200);
@@ -331,17 +353,23 @@ export class GameAPI {
      * @param {boolean} enabled
      */
     setFastForwardMode(enabled) {
+        console.log('[GameAPI] setFastForwardMode() called with enabled:', enabled);
         this.fastForwardMode = enabled;
         
-        if (!this.gameInstance) return;
+        if (!this.gameInstance) {
+            console.log('[GameAPI] setFastForwardMode() - no gameInstance, returning');
+            return;
+        }
         
         const game = this.gameInstance;
         
         if (enabled) {
+            console.log('[GameAPI] Enabling fast-forward mode');
             // Stop rendering for performance - no visual updates needed during training
             if (game.render && game.Render && !this.renderStopped) {
                 game.Render.stop(game.render);
                 this.renderStopped = true;
+                console.log('[GameAPI] Stopped rendering');
             }
             // Hide UI updates for performance
             if (game.scoreEl) game.scoreEl.style.display = 'none';
@@ -349,8 +377,10 @@ export class GameAPI {
             if (game.previewFruitEl) game.previewFruitEl.style.display = 'none';
             
             // Start manual simulation loop (runs as fast as possible)
+            console.log('[GameAPI] Calling startManualSimulationLoop()');
             this.startManualSimulationLoop();
         } else {
+            console.log('[GameAPI] Disabling fast-forward mode');
             // Stop manual simulation loop
             this.stopManualSimulationLoop();
             
@@ -377,17 +407,27 @@ export class GameAPI {
      * Bypasses requestAnimationFrame and runs physics in a tight loop
      */
     startManualSimulationLoop() {
-        if (this.manualLoopRunning) return;
+        console.log('[GameAPI] startManualSimulationLoop() called, manualLoopRunning:', this.manualLoopRunning);
+        if (this.manualLoopRunning) {
+            console.log('[GameAPI] Manual loop already running, returning');
+            return;
+        }
         
-        if (!this.gameInstance || !this.gameInstance.engine) return;
+        if (!this.gameInstance || !this.gameInstance.engine) {
+            console.log('[GameAPI] No gameInstance or engine, returning');
+            return;
+        }
         
         // Stop the Runner to prevent double-updates
         if (this.gameInstance.Runner && this.gameInstance.runner && !this.runnerStopped) {
+            console.log('[GameAPI] Stopping the Runner');
             this.gameInstance.Runner.stop(this.gameInstance.runner);
             this.runnerStopped = true;
         }
         
         this.manualLoopRunning = true;
+        this.manualLoopCount = 0;  // Reset loop counter
+        console.log('[GameAPI] Starting manual simulation loop');
         
         // Run simulation loop
         // Note: We use this.gameInstance inside the loop instead of capturing
@@ -395,15 +435,23 @@ export class GameAPI {
         // the loop will automatically use the new engine.
         const runLoop = () => {
             if (!this.manualLoopRunning || !this.fastForwardMode) {
+                console.log('[GameAPI] Stopping loop - manualLoopRunning:', this.manualLoopRunning, 'fastForwardMode:', this.fastForwardMode);
                 return;
             }
             
             // Check if game instance is still valid
             if (!this.gameInstance || !this.gameInstance.engine) {
                 // Stop the loop cleanly
+                console.log('[GameAPI] gameInstance or engine no longer valid, stopping loop');
                 this.manualLoopRunning = false;
                 this.manualLoopTimeoutId = null;
                 return;
+            }
+            
+            // Log every 1000 loops to show it's running
+            this.manualLoopCount++;
+            if (this.manualLoopCount % 1000 === 0) {
+                console.log('[GameAPI] Manual loop iteration #', this.manualLoopCount);
             }
             
             // Run multiple physics updates per "tick" for maximum speed

@@ -94,38 +94,47 @@ export class RLController {
      * @param {number} maxSteps - Max steps per episode
      */
     async startTraining(episodes = 1000, maxSteps = 500) {
+        console.log('[RLController] startTraining called with episodes:', episodes, 'maxSteps:', maxSteps);
         if (this.isTraining) {
-            console.warn('Training already in progress');
+            console.warn('[RLController] Training already in progress');
             return;
         }
         
         this.isTraining = true;
         this.isPaused = false;
+        console.log('[RLController] isTraining set to true');
         
         // Try to load existing model to continue training
         const modelLoaded = await this.agent.loadModel();
         if (modelLoaded) {
-            console.log('Loaded existing model, continuing training...');
+            console.log('[RLController] Loaded existing model, continuing training...');
         } else {
-            console.log('Starting fresh training...');
+            console.log('[RLController] Starting fresh training...');
         }
         
         // Training loop
+        console.log('[RLController] Starting training loop');
         for (let episode = 0; episode < episodes && this.isTraining; episode++) {
+            console.log('[RLController] Training loop iteration - episode:', episode, 'isTraining:', this.isTraining);
             if (this.isPaused) {
                 // Wait while paused
+                console.log('[RLController] Training paused, waiting...');
                 await new Promise(resolve => setTimeout(resolve, 100));
                 episode--;
                 continue;
             }
             
+            console.log('[RLController] Calling runEpisode for episode:', episode);
             await this.runEpisode(episode, maxSteps);
+            console.log('[RLController] runEpisode completed for episode:', episode);
             
             // Save model periodically
             if ((episode + 1) % 10 === 0) {
+                console.log('[RLController] Saving model at episode:', episode + 1);
                 await this.agent.saveModel();
             }
         }
+        console.log('[RLController] Training loop ended');
         
         // Final save
         if (this.isTraining) {
@@ -145,22 +154,41 @@ export class RLController {
      * @param {number} maxSteps - Maximum steps
      */
     async runEpisode(episode, maxSteps) {
+        console.log('[RLController] runEpisode started - episode:', episode, 'maxSteps:', maxSteps);
         // Reset environment
+        console.log('[RLController] Calling environment.reset()');
         let state = await this.environment.reset();
+        console.log('[RLController] environment.reset() completed, state length:', state ? state.length : 'null');
         let totalReward = 0;
         let stepCount = 0;
         
         this.stats.currentEpisode = episode + 1;
         this.stats.currentScore = 0;
         
+        console.log('[RLController] Starting step loop for episode:', episode);
         for (let step = 0; step < maxSteps; step++) {
-            if (!this.isTraining || this.isPaused) break;
+            if (!this.isTraining || this.isPaused) {
+                console.log('[RLController] Breaking step loop - isTraining:', this.isTraining, 'isPaused:', this.isPaused);
+                break;
+            }
+            
+            // Log every 50 steps to avoid too much console spam
+            if (step % 50 === 0) {
+                console.log('[RLController] Step', step, 'of episode', episode);
+            }
             
             // Select action
             const action = await this.agent.selectAction(state);
             
             // Execute action
+            // Log detailed action info only every 50 steps to avoid console spam
+            if (step % 50 === 0) {
+                console.log('[RLController] Step', step, '- calling environment.step() with action:', action);
+            }
             const { nextState, reward, done } = await this.environment.step(action);
+            if (step % 50 === 0) {
+                console.log('[RLController] Step', step, '- environment.step() returned - reward:', reward, 'done:', done);
+            }
             
             // Store experience
             this.agent.remember(state, action, reward, nextState, done);
@@ -168,6 +196,7 @@ export class RLController {
             // Train the agent periodically (every N steps) for better performance
             // Training every step is expensive; training every few steps is more efficient
             if (this.agent.memory.length >= this.agent.batchSize && step % this.trainEverySteps === 0) {
+                console.log('[RLController] Calling agent.replay() at step:', step);
                 await this.agent.replay();
             }
             
@@ -187,13 +216,17 @@ export class RLController {
             }
             
             if (done) {
+                console.log('[RLController] Episode', episode, 'ended at step:', step, '(done=true)');
                 break;
             }
         }
+        console.log('[RLController] Step loop completed for episode:', episode, 'stepCount:', stepCount);
         
         // End of episode
+        console.log('[RLController] Calling agent.endEpisode()');
         this.agent.endEpisode();
         this.stats.totalEpisodes++;
+        console.log('[RLController] Episode', episode, 'finished - totalEpisodes now:', this.stats.totalEpisodes);
         
         // Update statistics
         const finalScore = this.gameAPI.getGameState().score;
