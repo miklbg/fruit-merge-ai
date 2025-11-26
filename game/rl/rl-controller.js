@@ -32,7 +32,12 @@ export class RLController {
         this.isPlaying = false;
         this.isPaused = false;
         
+        // Training optimization: train every N steps instead of every step
+        this.trainEverySteps = 4; // Train once every 4 steps for better performance
+        
         // Statistics
+        // Note: totalEpisodes and totalSteps are cumulative across all training sessions
+        // They persist in localStorage and continue to grow as the model is trained
         this.stats = {
             totalEpisodes: 0,
             totalSteps: 0,
@@ -160,8 +165,9 @@ export class RLController {
             // Store experience
             this.agent.remember(state, action, reward, nextState, done);
             
-            // Train the agent
-            if (this.agent.memory.length >= this.agent.batchSize) {
+            // Train the agent periodically (every N steps) for better performance
+            // Training every step is expensive; training every few steps is more efficient
+            if (this.agent.memory.length >= this.agent.batchSize && step % this.trainEverySteps === 0) {
                 await this.agent.replay();
             }
             
@@ -175,8 +181,8 @@ export class RLController {
             const gameState = this.gameAPI.getGameState();
             this.stats.currentScore = gameState.score;
             
-            // Update stats periodically
-            if (step % 10 === 0 && this.onStatsUpdate) {
+            // Update stats periodically (less frequently to reduce overhead)
+            if (step % 20 === 0 && this.onStatsUpdate) {
                 this.onStatsUpdate(this.stats);
             }
             
