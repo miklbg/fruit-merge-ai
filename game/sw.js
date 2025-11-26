@@ -1,6 +1,6 @@
 // Service Worker for Fruit Merge Game
 // Update this version number whenever you make changes to force cache refresh
-const VERSION = '1.0.3';
+const VERSION = '1.0.4';
 const CACHE_NAME = `fruit-merge-v${VERSION}`;
 const urlsToCache = [
   './index.html',
@@ -26,12 +26,13 @@ const urlsToCache = [
 /**
  * Checks if a response is valid for caching
  * @param {Response} response - The fetch response to validate
- * @returns {boolean} True if response should be cached (status 200-299 and type 'basic' or 'cors')
+ * @returns {boolean} True if response should be cached (status 200 and type 'basic' or 'cors')
  */
 function isValidResponse(response) {
+  // Only cache successful full responses (200 OK)
+  // Exclude 206 Partial Content as it cannot be cached
   return response && 
-         response.status >= 200 && 
-         response.status < 300 && 
+         response.status === 200 && 
          (response.type === 'basic' || response.type === 'cors');
 }
 

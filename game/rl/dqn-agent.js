@@ -429,6 +429,9 @@ export class DQNAgent {
         const weights = this.model.getWeights();
         const weightCopies = weights.map(w => w.clone());
         this.targetModel.setWeights(weightCopies);
+        
+        // Dispose the weights retrieved from getWeights() since they are copies
+        weights.forEach(w => w.dispose());
     }
     
     /**
@@ -447,13 +450,13 @@ export class DQNAgent {
             });
         });
         
-        // Dispose old target weights
-        targetWeights.forEach(w => w.dispose());
-        
+        // Set the new weights on the target model
+        // Note: setWeights() takes ownership of the tensors, so we must NOT dispose newWeights
         this.targetModel.setWeights(newWeights);
         
-        // Dispose temporary weights
-        newWeights.forEach(w => w.dispose());
+        // Dispose the weights retrieved from getWeights() since they are copies
+        mainWeights.forEach(w => w.dispose());
+        targetWeights.forEach(w => w.dispose());
     }
     
     /**
