@@ -65,7 +65,9 @@ export class GameAPI {
         this.previousScore = gameInstance.score || 0;
         
         // Hook into the game engine's afterUpdate event to track simulation steps
-        if (gameInstance.engine && gameInstance.Events) {
+        // Only register this when NOT in fast-forward mode, as the manual loop
+        // handles onSimulationStep() calls directly for better reliability
+        if (!this.fastForwardMode && gameInstance.engine && gameInstance.Events) {
             gameInstance.Events.on(gameInstance.engine, 'afterUpdate', () => {
                 this.onSimulationStep();
             });
@@ -461,6 +463,12 @@ export class GameAPI {
                 // delta: time step in milliseconds (default: 1000/60 ≈ 16.67ms)
                 // correction: timing correction factor (default: 1, no correction)
                 Matter.Engine.update(this.gameInstance.engine, this.FIXED_DELTA_TIME);
+                
+                // Manually call onSimulationStep after each physics update
+                // This is needed because the Matter.js afterUpdate event may not fire
+                // consistently when using manual Engine.update() calls, especially
+                // after handleRestart() creates a new engine instance
+                this.onSimulationStep();
             }
             
             // Use setTimeout(0) to yield to the event loop
