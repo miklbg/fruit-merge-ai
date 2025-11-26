@@ -1393,6 +1393,56 @@
                 updateScore(score); 
 
 
+                // Initialize RL API if not already done
+                // IMPORTANT: This must be done BEFORE Runner.run() so that the afterUpdate
+                // event handler is registered before the runner starts
+                if (!gameAPI) {
+                    gameAPI = new GameAPI();
+                }
+                // Inject game instance into API
+                gameAPI.init({
+                    // Game world info
+                    gameWorldWidth,
+                    gameWorldHeight,
+                    gameOverLineY,
+                    wallThickness: BASE_WALL_THICKNESS,
+                    FRUITS,
+                    
+                    // Game state
+                    get score() { return score; },
+                    get currentFruitLevel() { return currentFruitLevel; },
+                    get nextFruitLevel() { return nextFruitLevel; },
+                    get isGameOver() { return isGameOver; },
+                    get currentGameMaxFruit() { return currentGameMaxFruit; },
+                    get boosterUnlocked() { return boosterUnlocked; },
+                    get boosterCooldownCount() { return boosterCooldownCount; },
+                    get isWarningActive() { return isWarningActive; },
+                    get lastDropTime() { return lastDropTime; },
+                    get currentPreviewX() { return currentPreviewX; },
+                    set currentPreviewX(val) { currentPreviewX = val; },
+                    
+                    // Game objects
+                    world,
+                    runner,
+                    render,
+                    engine,
+                    
+                    // Matter.js classes for rendering control and simulation
+                    Render,
+                    Runner, // Add Runner for manual simulation control
+                    Events, // Add Events for step tracking
+                    
+                    // UI elements
+                    scoreEl,
+                    nextFruitImgEl,
+                    previewFruitEl,
+                    
+                    // Game functions
+                    moveFruit,
+                    dropFruit,
+                    handleRestart
+                });
+
                 // Only start rendering if not in fast-forward mode (AI training)
                 // When in fast-forward mode, rendering will be explicitly stopped by setFastForwardMode
                 if (!gameAPI || !gameAPI.fastForwardMode) {
@@ -1528,53 +1578,6 @@
                 
                 // Update booster indicator position
                 updateBoosterIndicatorPosition();
-                
-                // Initialize RL API if not already done
-                if (!gameAPI) {
-                    gameAPI = new GameAPI();
-                }
-                // Inject game instance into API
-                gameAPI.init({
-                    // Game world info
-                    gameWorldWidth,
-                    gameWorldHeight,
-                    gameOverLineY,
-                    wallThickness: BASE_WALL_THICKNESS,
-                    FRUITS,
-                    
-                    // Game state
-                    get score() { return score; },
-                    get currentFruitLevel() { return currentFruitLevel; },
-                    get nextFruitLevel() { return nextFruitLevel; },
-                    get isGameOver() { return isGameOver; },
-                    get currentGameMaxFruit() { return currentGameMaxFruit; },
-                    get boosterUnlocked() { return boosterUnlocked; },
-                    get boosterCooldownCount() { return boosterCooldownCount; },
-                    get isWarningActive() { return isWarningActive; },
-                    get lastDropTime() { return lastDropTime; },
-                    get currentPreviewX() { return currentPreviewX; },
-                    set currentPreviewX(val) { currentPreviewX = val; },
-                    
-                    // Game objects
-                    world,
-                    runner,
-                    render,
-                    engine,
-                    
-                    // Matter.js classes for rendering control
-                    Render,
-                    Events, // Add Events for step tracking
-                    
-                    // UI elements
-                    scoreEl,
-                    nextFruitImgEl,
-                    previewFruitEl,
-                    
-                    // Game functions
-                    moveFruit,
-                    dropFruit,
-                    handleRestart
-                });
                 
                 addEventListeners();
             }

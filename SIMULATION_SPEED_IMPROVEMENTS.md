@@ -10,14 +10,15 @@ Previously, the simulation used **millisecond-based timeouts** even in fast-forw
 - `DROP_COOLDOWN_MS = 20` - waited 20ms after each drop
 - `FAST_RESET_TIMEOUT_MS = 5` - waited 5ms after reset
 - Used `setTimeout()` to wait for actions to complete
+- Used `timeScale = 20` which is still tied to browser's 60 FPS `requestAnimationFrame`
 
-This meant that even at 20x physics speed, the simulation was still limited by real-time delays.
+This meant that even at 20x physics speed, the simulation was still limited by real-time delays and the browser's frame rate.
 
 ## Solution
 
-Convert all time-based cooldowns to **simulation step-based** cooldowns:
+### Phase 1: Step-Based Cooldowns
 
-### Key Changes
+Convert all time-based cooldowns to **simulation step-based** cooldowns:
 
 1. **Step-Based Cooldowns**
    - `DROP_COOLDOWN_STEPS = 25` - wait 25 physics updates after drop (≈400ms at 60 FPS)
@@ -33,16 +34,32 @@ Convert all time-based cooldowns to **simulation step-based** cooldowns:
    - Tracks simulation steps globally
    - Processes actions as soon as physics settles
 
-4. **Dual Mode Support**
-   - **Fast-forward mode**: Uses step-based timing (maximum speed)
-   - **Normal mode**: Still uses timeout-based timing (for visual gameplay)
+### Phase 2: Manual Simulation Loop (Maximum Speed)
+
+Bypass the Matter.js Runner entirely and manually call `Engine.update()` in a tight loop:
+
+1. **Runner Bypass**
+   - Stop the Matter.js Runner (which uses `requestAnimationFrame`)
+   - Manually call `Matter.Engine.update(engine, deltaTime, correction)` in a loop
+   - Use fixed time step (`1000/60` ms) for consistent physics
+
+2. **Batched Updates**
+   - Run multiple physics updates per JavaScript "tick" (batch size: 10)
+   - Use `setTimeout(0)` between batches to yield to the event loop
+   - Allows promises to resolve and prevents blocking
+
+3. **Speed Control**
+   - Physics runs as fast as calculations finish
+   - Not tied to real-time or browser frame rate
+   - Only limited by CPU speed
 
 ## Benefits
 
 ### Maximum Simulation Speed
+- **No real-time dependency** - runs as fast as calculations finish
+- **No frame rate limit** - bypasses 60 FPS requestAnimationFrame
 - **No artificial delays** - actions complete as soon as physics settles
 - **No busy waiting** - callbacks are triggered automatically
-- **Scales with physics speed** - at 20x speed, completes 25 steps much faster than 25ms
 
 ### Example Speed Comparison
 
@@ -51,10 +68,15 @@ Normal Mode (1x physics):
   - Drop action: ~800ms timeout + physics time
   - Reset: ~200ms timeout + physics time
 
-Fast-Forward Mode (20x physics):
-  - OLD: 20ms timeout + physics time
-  - NEW: 25 steps (≈1-2ms at 20x speed) + physics time
+Fast-Forward Mode (OLD - 20x physics via timeScale):
+  - Still tied to 60 FPS browser loop
+  - 25 steps = ~1-2ms at 20x speed
   - Speed improvement: ~10-20x faster
+
+Fast-Forward Mode (NEW - Manual Engine.update loop):
+  - Runs as fast as CPU allows
+  - Not tied to any frame rate
+  - Speed improvement: ~100-1000x faster (depending on CPU)
 ```
 
 ### Accurate Physics Simulation

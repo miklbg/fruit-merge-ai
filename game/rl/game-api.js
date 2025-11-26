@@ -13,9 +13,10 @@ export class GameAPI {
         // These will be set by the game
         this.gameInstance = null;
         this.fastForwardMode = false;
-        // Physics speed multiplier for training - 20x provides maximum training speed
-        // while maintaining physics accuracy
-        this.TRAINING_PHYSICS_SPEED = 20;
+        
+        // Fixed time step for physics simulation (1/60th of a second = ~16.67ms)
+        // This ensures consistent physics behavior regardless of actual speed
+        this.FIXED_DELTA_TIME = 1000 / 60;
         
         // Convert time-based cooldowns to simulation steps
         // At 60 FPS, 400ms = ~24 frames. We'll use 25 steps for safety
@@ -39,9 +40,18 @@ export class GameAPI {
         
         // Rendering control
         this.renderStopped = false;
+        this.runnerStopped = false;
         
         // Track simulation steps
         this.simulationStep = 0;
+        
+        // Manual simulation loop control
+        this.manualLoopRunning = false;
+        this.manualLoopTimeoutId = null;
+        
+        // Batch size for manual simulation loop (number of physics updates per JS tick)
+        // Higher = faster but less responsive, Lower = more responsive but slower
+        this.SIMULATION_BATCH_SIZE = 10;
     }
 
     /**
@@ -58,6 +68,11 @@ export class GameAPI {
             gameInstance.Events.on(gameInstance.engine, 'afterUpdate', () => {
                 this.onSimulationStep();
             });
+        }
+        
+        // If fast-forward mode was already enabled, start manual simulation loop
+        if (this.fastForwardMode) {
+            this.startManualSimulationLoop();
         }
     }
     
@@ -308,6 +323,8 @@ export class GameAPI {
 
     /**
      * Enable fast-forward mode for training
+     * In fast-forward mode, we bypass the Runner and manually call Engine.update()
+     * as fast as calculations finish (not tied to real-time or requestAnimationFrame)
      * @param {boolean} enabled
      */
     setFastForwardMode(enabled) {
@@ -318,11 +335,6 @@ export class GameAPI {
         const game = this.gameInstance;
         
         if (enabled) {
-            // Speed up physics using engine.timing.timeScale
-            // This is the proper way to speed up Matter.js physics without breaking mechanics
-            if (game.engine) {
-                game.engine.timing.timeScale = this.TRAINING_PHYSICS_SPEED;
-            }
             // Stop rendering for performance - no visual updates needed during training
             if (game.render && game.Render && !this.renderStopped) {
                 game.Render.stop(game.render);
@@ -332,11 +344,13 @@ export class GameAPI {
             if (game.scoreEl) game.scoreEl.style.display = 'none';
             if (game.nextFruitImgEl) game.nextFruitImgEl.style.display = 'none';
             if (game.previewFruitEl) game.previewFruitEl.style.display = 'none';
+            
+            // Start manual simulation loop (runs as fast as possible)
+            this.startManualSimulationLoop();
         } else {
-            // Normal speed
-            if (game.engine) {
-                game.engine.timing.timeScale = 1; // Reset to normal speed
-            }
+            // Stop manual simulation loop
+            this.stopManualSimulationLoop();
+            
             // Resume rendering
             if (game.render && game.Render && this.renderStopped) {
                 game.Render.run(game.render);
@@ -346,6 +360,65 @@ export class GameAPI {
             if (game.scoreEl) game.scoreEl.style.display = '';
             if (game.nextFruitImgEl) game.nextFruitImgEl.style.display = '';
             if (game.previewFruitEl) game.previewFruitEl.style.display = '';
+            
+            // Restart the Runner for normal gameplay
+            if (game.Runner && game.runner && game.engine && this.runnerStopped) {
+                game.Runner.run(game.runner, game.engine);
+                this.runnerStopped = false;
+            }
+        }
+    }
+    
+    /**
+     * Start manual simulation loop that runs as fast as calculations finish
+     * Bypasses requestAnimationFrame and runs physics in a tight loop
+     */
+    startManualSimulationLoop() {
+        if (this.manualLoopRunning) return;
+        
+        const game = this.gameInstance;
+        if (!game || !game.engine) return;
+        
+        // Stop the Runner to prevent double-updates
+        if (game.Runner && game.runner && !this.runnerStopped) {
+            game.Runner.stop(game.runner);
+            this.runnerStopped = true;
+        }
+        
+        this.manualLoopRunning = true;
+        
+        // Run simulation loop
+        const runLoop = () => {
+            if (!this.manualLoopRunning || !this.fastForwardMode) {
+                return;
+            }
+            
+            // Run multiple physics updates per "tick" for maximum speed
+            for (let i = 0; i < this.SIMULATION_BATCH_SIZE; i++) {
+                // Manually update the physics engine with fixed time step
+                // Matter.js Engine.update(engine, delta, correction)
+                // delta: time step in milliseconds (default: 1000/60 ≈ 16.67ms)
+                // correction: timing correction factor (default: 1, no correction)
+                Matter.Engine.update(game.engine, this.FIXED_DELTA_TIME);
+            }
+            
+            // Use setTimeout(0) to yield to the event loop
+            // This allows promises to resolve and prevents blocking
+            this.manualLoopTimeoutId = setTimeout(runLoop, 0);
+        };
+        
+        // Start the loop
+        runLoop();
+    }
+    
+    /**
+     * Stop the manual simulation loop
+     */
+    stopManualSimulationLoop() {
+        this.manualLoopRunning = false;
+        if (this.manualLoopTimeoutId !== null) {
+            clearTimeout(this.manualLoopTimeoutId);
+            this.manualLoopTimeoutId = null;
         }
     }
 
