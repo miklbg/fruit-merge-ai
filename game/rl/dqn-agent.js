@@ -451,12 +451,13 @@ export class DQNAgent {
         });
         
         // Set the new weights on the target model
-        // Note: setWeights() takes ownership of the tensors, so we must NOT dispose newWeights
+        // Note: setWeights() copies tensor values into model weights, so we must dispose newWeights after
         this.targetModel.setWeights(newWeights);
         
-        // Dispose the weights retrieved from getWeights() since they are copies
+        // Dispose all tensors - getWeights() returns copies, and newWeights are no longer needed
         mainWeights.forEach(w => w.dispose());
         targetWeights.forEach(w => w.dispose());
+        newWeights.forEach(w => w.dispose());
     }
     
     /**
@@ -522,23 +523,33 @@ export class DQNAgent {
      * @returns {boolean} Success
      */
     async loadModel(name = 'fruit-merge-dqn') {
+        // First check if a saved model exists
+        const exists = await this.modelExists(name);
+        if (!exists) {
+            console.log('No saved model found, using current models');
+            return false;
+        }
+        
+        // Dispose existing models BEFORE loading new ones to avoid
+        // TensorFlow.js layer variable conflicts. When loading a model from IndexedDB,
+        // TensorFlow.js may reuse layer variable names, causing conflicts if old
+        // models with those names still exist.
+        if (this.model) {
+            this.model.dispose();
+            this.model = null;
+        }
+        if (this.targetModel) {
+            this.targetModel.dispose();
+            this.targetModel = null;
+        }
+        
         let newModel = null;
         let newTargetModel = null;
         
         try {
-            // Load new models into temporary variables first
-            // This ensures we don't dispose the old models if loading fails
+            // Load models from IndexedDB
             newModel = await tf.loadLayersModel(`indexeddb://${name}`);
             newTargetModel = await tf.loadLayersModel(`indexeddb://${name}`);
-            
-            // Dispose existing models before assigning new ones to prevent
-            // TensorFlow.js layer variable conflicts (e.g., "LayersVariable already disposed")
-            if (this.model) {
-                this.model.dispose();
-            }
-            if (this.targetModel) {
-                this.targetModel.dispose();
-            }
             
             this.model = newModel;
             this.targetModel = newTargetModel;
@@ -566,6 +577,8 @@ export class DQNAgent {
             
             return true;
         } catch (error) {
+            console.error('Failed to load model:', error);
+            
             // Clean up partially loaded models if loading failed
             if (newModel) {
                 newModel.dispose();
@@ -573,7 +586,12 @@ export class DQNAgent {
             if (newTargetModel) {
                 newTargetModel.dispose();
             }
-            console.error('Failed to load model:', error);
+            
+            // Rebuild models from scratch since we disposed the old ones
+            this.model = this.buildModel();
+            this.targetModel = this.buildModel();
+            this.updateTargetModel();
+            
             return false;
         }
     }
