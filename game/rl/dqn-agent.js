@@ -522,9 +522,26 @@ export class DQNAgent {
      * @returns {boolean} Success
      */
     async loadModel(name = 'fruit-merge-dqn') {
+        let newModel = null;
+        let newTargetModel = null;
+        
         try {
-            this.model = await tf.loadLayersModel(`indexeddb://${name}`);
-            this.targetModel = await tf.loadLayersModel(`indexeddb://${name}`);
+            // Load new models into temporary variables first
+            // This ensures we don't dispose the old models if loading fails
+            newModel = await tf.loadLayersModel(`indexeddb://${name}`);
+            newTargetModel = await tf.loadLayersModel(`indexeddb://${name}`);
+            
+            // Dispose existing models before assigning new ones to prevent
+            // TensorFlow.js layer variable conflicts (e.g., "LayersVariable already disposed")
+            if (this.model) {
+                this.model.dispose();
+            }
+            if (this.targetModel) {
+                this.targetModel.dispose();
+            }
+            
+            this.model = newModel;
+            this.targetModel = newTargetModel;
             
             // Compile the loaded models with Huber loss
             this.model.compile({
@@ -549,6 +566,13 @@ export class DQNAgent {
             
             return true;
         } catch (error) {
+            // Clean up partially loaded models if loading failed
+            if (newModel) {
+                newModel.dispose();
+            }
+            if (newTargetModel) {
+                newTargetModel.dispose();
+            }
             console.error('Failed to load model:', error);
             return false;
         }
