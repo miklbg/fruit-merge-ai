@@ -57,6 +57,9 @@ export class DQNAgent {
         // Current learning rate (will be decayed)
         this.currentLearningRate = this.learningRate;
         
+        // Loading state flag to prevent model usage during async load
+        this.isLoading = false;
+        
         // Create Q-network and target network
         this.model = this.buildModel();
         this.targetModel = this.buildModel();
@@ -430,8 +433,10 @@ export class DQNAgent {
         const weightCopies = weights.map(w => w.clone());
         this.targetModel.setWeights(weightCopies);
         
-        // Dispose the weights retrieved from getWeights() since they are copies
+        // Dispose all tensors - getWeights() returns copies, and setWeights() copies values
+        // so weightCopies are no longer needed after setWeights()
         weights.forEach(w => w.dispose());
+        weightCopies.forEach(w => w.dispose());
     }
     
     /**
@@ -530,29 +535,32 @@ export class DQNAgent {
             return false;
         }
         
-        // Dispose existing models BEFORE loading new ones to avoid
-        // TensorFlow.js layer variable conflicts. When loading a model from IndexedDB,
-        // TensorFlow.js may reuse layer variable names, causing conflicts if old
-        // models with those names still exist.
-        if (this.model) {
-            this.model.dispose();
-            this.model = null;
-        }
-        if (this.targetModel) {
-            this.targetModel.dispose();
-            this.targetModel = null;
-        }
+        // Set loading flag to prevent model usage during async operations
+        this.isLoading = true;
+        
+        // Store references to old models for disposal after new models are loaded
+        const oldModel = this.model;
+        const oldTargetModel = this.targetModel;
         
         let newModel = null;
         let newTargetModel = null;
         
         try {
-            // Load models from IndexedDB
+            // Load models from IndexedDB first, keeping old models valid during load
             newModel = await tf.loadLayersModel(`indexeddb://${name}`);
             newTargetModel = await tf.loadLayersModel(`indexeddb://${name}`);
             
+            // Assign new models before disposing old ones
             this.model = newModel;
             this.targetModel = newTargetModel;
+            
+            // Now dispose old models after assignment to avoid layer variable conflicts
+            if (oldModel) {
+                oldModel.dispose();
+            }
+            if (oldTargetModel) {
+                oldTargetModel.dispose();
+            }
             
             // Compile the loaded models with Huber loss
             this.model.compile({
@@ -575,6 +583,7 @@ export class DQNAgent {
                 this.currentLearningRate = metadata.currentLearningRate || this.learningRate;
             }
             
+            this.isLoading = false;
             return true;
         } catch (error) {
             console.error('Failed to load model:', error);
@@ -587,11 +596,15 @@ export class DQNAgent {
                 newTargetModel.dispose();
             }
             
-            // Rebuild models from scratch since we disposed the old ones
-            this.model = this.buildModel();
-            this.targetModel = this.buildModel();
-            this.updateTargetModel();
+            // Old models were not disposed, so this.model and this.targetModel still point to them
+            // Only rebuild if models are somehow null (shouldn't happen in normal operation)
+            if (!this.model || !this.targetModel) {
+                this.model = this.buildModel();
+                this.targetModel = this.buildModel();
+                this.updateTargetModel();
+            }
             
+            this.isLoading = false;
             return false;
         }
     }
