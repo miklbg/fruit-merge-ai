@@ -21,16 +21,14 @@ export class GameAPI {
         this.turboMode = false; // Extra-fast mode for maximum training speed
         
         // Fixed time step for physics simulation (1/60th of a second = ~16.67ms)
-        // This ensures consistent physics behavior regardless of actual speed
+        // This ensures consistent physics behavior regardless of actual speed.
         // IMPORTANT: Matter.js recommends delta <= 16.667ms for stable physics.
         // Larger values can cause physics instability (objects passing through walls,
         // incorrect collision detection, etc.) which can prevent episodes from completing.
+        // All modes (normal, fast-forward, turbo) use this same delta time.
+        // Speed improvement in turbo mode is achieved through batching (TURBO_BATCH_SIZE
+        // updates per tick) rather than larger time steps.
         this.FIXED_DELTA_TIME = 1000 / 60;
-        
-        // Turbo mode also uses the standard delta time for physics stability.
-        // Speed is achieved through batching (TURBO_BATCH_SIZE updates per tick)
-        // rather than larger time steps, which would cause physics instability.
-        this.TURBO_DELTA_TIME = 1000 / 60;
         
         // Convert time-based cooldowns to simulation steps
         // At 60 FPS, 400ms = 24 frames. We use 25 steps for safety margin
@@ -198,7 +196,7 @@ export class GameAPI {
         const fillLevel = Math.min(1, Math.max(0, 1 - (gameOverLineY / (maxY || gameWorldHeight))));
         
         // Time since last drop - use simulation steps in fast-forward mode for consistency
-        // Both modes use the same fixed delta time for accurate timing calculation
+        // All modes (normal, fast-forward, turbo) use the same fixed delta time
         const timeSinceLastDrop = this.fastForwardMode 
             ? (this.simulationStep - (game.lastDropStep || 0)) * this.FIXED_DELTA_TIME
             : Date.now() - (game.lastDropTime || 0);
@@ -487,7 +485,7 @@ export class GameAPI {
         // Choose batch size based on turbo mode
         const batchSize = this.turboMode ? this.TURBO_BATCH_SIZE : this.SIMULATION_BATCH_SIZE;
         
-        // Both modes use the same fixed delta time (16.67ms) for physics stability.
+        // All modes use the same fixed delta time (16.67ms) for physics stability.
         // Speed difference is achieved through batch size (more updates per tick in turbo mode).
         const deltaTime = this.FIXED_DELTA_TIME;
         
@@ -517,7 +515,7 @@ export class GameAPI {
             
             // Get current batch size (may change if turbo mode is toggled)
             const currentBatchSize = this.turboMode ? this.TURBO_BATCH_SIZE : this.SIMULATION_BATCH_SIZE;
-            // Use fixed delta time for physics stability (both modes use the same value)
+            // Use fixed delta time for physics stability (all modes use the same value)
             const currentDeltaTime = this.FIXED_DELTA_TIME;
             
             // Run multiple physics updates per "tick" for maximum speed
