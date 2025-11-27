@@ -433,9 +433,8 @@ export class DQNAgent {
         const weightCopies = weights.map(w => w.clone());
         this.targetModel.setWeights(weightCopies);
         
-        // Dispose all tensors - getWeights() returns copies, and setWeights() copies values
-        // so weightCopies are no longer needed after setWeights()
-        weights.forEach(w => w.dispose());
+        // Only dispose the cloned copies after setWeights() copies their values
+        // Note: getWeights() returns the model's internal tensors (not copies), so we must NOT dispose them
         weightCopies.forEach(w => w.dispose());
     }
     
@@ -459,9 +458,8 @@ export class DQNAgent {
         // Note: setWeights() copies tensor values into model weights, so we must dispose newWeights after
         this.targetModel.setWeights(newWeights);
         
-        // Dispose all tensors - getWeights() returns copies, and newWeights are no longer needed
-        mainWeights.forEach(w => w.dispose());
-        targetWeights.forEach(w => w.dispose());
+        // Only dispose the newly created blended weights after setWeights() copies their values
+        // Note: getWeights() returns the model's internal tensors (not copies), so we must NOT dispose mainWeights or targetWeights
         newWeights.forEach(w => w.dispose());
     }
     
